@@ -258,3 +258,29 @@
 - Libraries provide all functionality needed for workflows
 - Next: Create workflow scripts that use these libraries
 
+
+## Task 7: CI Verification Workflow
+
+### Completed: 2026-02-02
+
+**What was done:**
+- Created `.github/workflows/agent-ci.yml` - CI verification workflow
+
+**Key features:**
+- Trigger: workflow_dispatch with pr_number, head_sha, head_ref inputs
+- Minimal permissions: contents: read, checks: write, pull-requests: read
+- No secrets usage (security requirement)
+- Verifies HEAD SHA matches expected (prevents wrong code execution)
+- Runs lint and test if available
+- Creates check-run named "agent/ci" for merge gates
+- Handles missing package.json gracefully
+
+**Design decisions:**
+- Uses workflow_dispatch (not pull_request_target) for security
+- Validates SHA before running any code
+- Continues on error to always create check-run
+- Check-run name is fixed: "agent/ci" (for ruleset requirements)
+
+**Status:**
+- Task 7 complete: 6/13 tasks (46%)
+
