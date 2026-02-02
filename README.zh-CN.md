@@ -161,6 +161,17 @@ GitHub 自治代理已**功能完备**，可以部署到生产环境！
 │   ├── agent-merge-policy.yml          # 合并策略
 │   ├── agent-commands.yml              # ChatOps 命令
 │   └── agent-reconcile.yml             # 协调/修复
+├── scripts/                            # 外部工作流脚本
+│   ├── lib/                            # 共享库
+│   │   ├── github-client.js            # GitHub API 封装
+│   │   ├── config-loader.js            # 配置加载器
+│   │   ├── state-manager.js            # 状态管理
+│   │   └── utils.js                    # 实用函数
+│   ├── package.json                    # 脚本依赖
+│   ├── dispatch-task.js                # 任务调度器
+│   ├── create-tasks.js                 # 任务创建
+│   ├── evaluate-merge-policy.js        # 合并策略评估
+│   └── ... (另外 16 个工作流脚本)
 └── ISSUE_TEMPLATE/
     ├── config.yml
     └── agent-request.yml               # 需求模板

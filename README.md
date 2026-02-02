@@ -161,6 +161,17 @@ The GitHub Autonomous Agent is **feature-complete** and ready for production dep
 │   ├── agent-merge-policy.yml          # Merge policy
 │   ├── agent-commands.yml              # ChatOps commands
 │   └── agent-reconcile.yml             # Reconciliation
+├── scripts/                            # External workflow scripts
+│   ├── lib/                            # Shared libraries
+│   │   ├── github-client.js            # GitHub API wrapper
+│   │   ├── config-loader.js            # Configuration loader
+│   │   ├── state-manager.js            # State management
+│   │   └── utils.js                    # Utility functions
+│   ├── package.json                    # Script dependencies
+│   ├── dispatch-task.js                # Task dispatcher
+│   ├── create-tasks.js                 # Task creation
+│   ├── evaluate-merge-policy.js        # Merge policy evaluation
+│   └── ... (16 more workflow scripts)
 └── ISSUE_TEMPLATE/
     ├── config.yml
     └── agent-request.yml               # Requirement template
