@@ -493,7 +493,7 @@ Wave 3（合并策略 + CI + 恢复/对账）：
   - 需求 issue 打开后，`agent-intake` 仅对包含 `<!-- agent-request -->` 的 issue 生效。
   - 系统生成的 task 子 issue 不会触发 intake。
 
-- [ ] 3. 控制面：需求 intake 与 Spec PR 生成闭环
+- [x] 3. 控制面：需求 intake 与 Spec PR 生成闭环
 
   **要做什么**：
   - 触发方式（固定，不再二义）：`issues: opened` + 需求 issue template 注入 marker `<!-- agent-request -->`。
