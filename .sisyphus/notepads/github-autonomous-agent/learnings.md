@@ -185,3 +185,37 @@
 
 **Note**: This is documentation-only. The actual probe workflow (automated checking) is not implemented due to complexity blocker.
 
+
+## Core Library Implementation Started
+
+### Date: 2026-02-02
+
+**What was done:**
+- Created `agent/lib/github.js` - GitHub API wrapper using Octokit
+- Created `agent/lib/state.js` - State management with version locking
+
+**github.js features:**
+- Issue operations (get, create comment, update, add/remove labels, assign)
+- PR operations (get, list files, merge)
+- Check-run creation
+- Workflow dispatch
+- Content retrieval
+
+**state.js features:**
+- Read state from issue comments (finds latest version)
+- Write state with version locking and retry
+- Initialize state for new issues
+- Update task status
+- Move cursor (for serial execution)
+- Set paused flag
+
+**Key design decisions:**
+- Version locking prevents concurrent modification conflicts
+- State stored in JSON code block within issue comment
+- Marker-based identification for idempotent operations
+- Retry logic for version conflicts (up to 3 attempts)
+
+**Status:**
+- Core libraries: 2/5 complete (github, state)
+- Remaining: plan.js, commands.js, policies.js
+
