@@ -61,14 +61,16 @@ jobs:
             };
             
             // Create state comment
-            const stateComment = `${stateMarker}
-\`\`\`json
-${JSON.stringify(initialState, null, 2)}
-\`\`\`
-
-**Agent State Initialized**
-
-This comment tracks the execution state of the autonomous agent. Do not edit manually.`;
+            const stateComment = [
+              stateMarker,
+              '```json',
+              JSON.stringify(initialState, null, 2),
+              '```',
+              '',
+              'Agent State Initialized',
+              '',
+              'This comment tracks the execution state of the autonomous agent. Do not edit manually.'
+            ].join('\n');
             
             await github.rest.issues.createComment({
               owner: context.repo.owner,

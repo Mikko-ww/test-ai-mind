@@ -139,45 +139,31 @@ jobs:
               labels: [levelLabel, config.labels.pr.task]
             });
             
-            const policyComment = `## 🔒 Merge Policy Evaluation
-
-**Task:** ${taskId}
-**Declared Level:** \`${declaredLevel}\`
-**Computed Level:** \`${computedLevel}\`
-**Final Level:** \`${finalLevel}\`
-
-**Reason:** ${reason}
-
-**Changed Files:** ${changedFiles.length}
-
-### File Analysis
-
-${matchedRules.slice(0, 20).join('\n')}
-${matchedRules.length > 20 ? `\n... and ${matchedRules.length - 20} more files` : ''}
-
-### Merge Requirements
-
-${finalLevel === 'l1' ? `
-**L1 - Auto-merge**
-- ✅ All files in allowlist
-- ⏳ Waiting for CI checks to pass
-- 🤖 Will auto-merge when checks are green
-` : ''}
-
-${finalLevel === 'l2' ? `
-**L2 - Command approval required**
-- ⚠️ Contains files outside allowlist
-- ⏳ Waiting for CI checks to pass
-- 👤 Requires \`/approve-task\` command from collaborator
-` : ''}
-
-${finalLevel === 'l3' ? `
-**L3 - Full PR review required**
-- ❌ Contains sensitive file changes or too many files
-- ⏳ Waiting for CI checks to pass
-- 👥 Requires full PR review approval
-` : ''}
-`;
+            const policyComment = [
+              '## 🔒 Merge Policy Evaluation',
+              '',
+              'Task: ' + taskId,
+              'Declared Level: `' + declaredLevel + '`',
+              'Computed Level: `' + computedLevel + '`',
+              'Final Level: `' + finalLevel + '`',
+              '',
+              'Reason: ' + reason,
+              '',
+              'Changed Files: ' + changedFiles.length,
+              '',
+              '### File Analysis',
+              '',
+              matchedRules.slice(0, 20).join('\n'),
+              matchedRules.length > 20 ? '\n... and ' + (matchedRules.length - 20) + ' more files' : '',
+              '',
+              '### Merge Requirements',
+              '',
+              finalLevel === 'l1' ? 'L1 - Auto-merge\n- ✅ All files in allowlist\n- ⏳ Waiting for CI checks to pass\n- 🤖 Will auto-merge when checks are green' : '',
+              '',
+              finalLevel === 'l2' ? 'L2 - Command approval required\n- ⚠️ Contains files outside allowlist\n- ⏳ Waiting for CI checks to pass\n- 👤 Requires `/approve-task` command from collaborator' : '',
+              '',
+              finalLevel === 'l3' ? 'L3 - Full PR review required\n- ❌ Contains sensitive file changes or too many files\n- ⏳ Waiting for CI checks to pass\n- 👥 Requires full PR review approval' : ''
+            ].filter(line => line !== '').join('\n');
             
             await github.rest.issues.createComment({
               owner: context.repo.owner,

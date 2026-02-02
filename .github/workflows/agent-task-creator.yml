@@ -80,34 +80,35 @@ jobs:
               let taskIssueNumber = taskIssueMap.get(task.id);
               
               if (!taskIssueNumber) {
-                const issueBody = `<!-- agent-task -->
-
-**Parent Issue:** #${issueNumber}
-**Task ID:** \`${task.id}\`
-**Level:** \`${task.level}\`
-**Plan:** \`${planPath}\`
-
-## Task Description
-
-${task.title}
-
-## Acceptance Criteria
-
-${task.acceptance || 'See plan file for details'}
-
-## Dependencies
-
-${task.deps && task.deps.length > 0 ? task.deps.map(d => `- ${d}`).join('\n') : 'None'}
-
-## Notes
-
-${task.notes || 'None'}
-
----
-
-Agent-Parent-Issue: ${issueNumber}
-Agent-Task-Id: ${task.id}
-`;
+                const issueBody = [
+                  '<!-- agent-task -->',
+                  '',
+                  'Parent Issue: #' + issueNumber,
+                  'Task ID: `' + task.id + '`',
+                  'Level: `' + task.level + '`',
+                  'Plan: `' + planPath + '`',
+                  '',
+                  '## Task Description',
+                  '',
+                  task.title,
+                  '',
+                  '## Acceptance Criteria',
+                  '',
+                  task.acceptance || 'See plan file for details',
+                  '',
+                  '## Dependencies',
+                  '',
+                  task.deps && task.deps.length > 0 ? task.deps.map(d => '- ' + d).join('\n') : 'None',
+                  '',
+                  '## Notes',
+                  '',
+                  task.notes || 'None',
+                  '',
+                  '---',
+                  '',
+                  'Agent-Parent-Issue: ' + issueNumber,
+                  'Agent-Task-Id: ' + task.id
+                ].join('\n');
                 
                 const newIssue = await github.rest.issues.create({
                   owner: context.repo.owner,

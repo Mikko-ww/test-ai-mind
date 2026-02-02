@@ -59,7 +59,8 @@ jobs:
             return { prType, parentIssue, taskId };
 
       - name: Handle Spec PR merge
-        if: steps.identify.outputs.pr_type == 'spec' && github.event.action == 'closed' && github.event.pull_request.merged ==     uses: actions/github-script@v7
+        if: steps.identify.outputs.pr_type == 'spec' && github.event.action == 'closed' && github.event.pull_request.merged == true
+        uses: actions/github-script@v7
         env:
           AGENT_GH_TOKEN: ${{ secrets.AGENT_GH_TOKEN }}
         with:
@@ -89,54 +90,54 @@ jobs:
               labels: [config.labels.parent.spec_approved, config.labels.parent.plan_in_progress]
             });
             
-            const customInstructions = `
-# Task: Generate Execution Plan (YAML + Chinese Markdown)
-
-Please create a detailed execution plan based on the approved specification.
-
-## Requirements:
-1. Create TWO files:
-   - \`${planYamlDir}/issue-${issueNumber}.yaml\` - Machine-readable plan (YAML)
-   - \`${planMdDir}/issue-${issueNumber}.md\` - Human-readable plan (Chinese)
-
-2. YAML file structure (follow \`docs/agent/plan.schema.json\`):
-   \`\`\`yaml
-   tasks:
-     - id: task-1
-       title: "Task title"
-       level: l1  # or l2, l3
-       deps: []
-       status: pending
-       issue: null
-       pr: null
-       acceptance: "Acceptance criteria"
-       notes: ""
-   \`\`\`
-
-3. Markdown file structure (follow \`docs/agent/PLAN_TEMPLATE.md\`):
-   - Include task list with status
-   - Link to parent issue
-   - Chinese language
-
-4. Task levels:
-   - **L1**: Low-risk changes (docs, tests) - auto-merge
-   - **L2**: Medium-risk changes - requires \`/approve-task\` command
-   - **L3**: High-risk changes - requires PR review
-
-## PR Requirements:
-1. PR title: "[Plan] Issue #${issueNumber}: <brief description>"
-2. **IMPORTANT**: PR body MUST include:
-   \`\`\`
-   Agent-Parent-Issue: ${issueNumber}
-   Agent-Task-Id: plan
-   \`\`\`
-3. Target branch: ${bas
-
-## Notes:
-- Break down into 3-8 atomic tasks
-- Each task should be independently testable
-- Assign appropriate risk levels
-`.trim();
+            const customInstructions = [
+              '# Task: Generate Execution Plan (YAML + Chinese Markdown)',
+              '',
+              'Please create a detailed execution plan based on the approved specification.',
+              '',
+              '## Requirements:',
+              '1. Create TWO files:',
+              '   - `' + planYamlDir + '/issue-' + issueNumber + '.yaml` - Machine-readable plan (YAML)',
+              '   - `' + planMdDir + '/issue-' + issueNumber + '.md` - Human-readable plan (Chinese)',
+              '',
+              '2. YAML file structure (follow `docs/agent/plan.schema.json`):',
+              '   ```yaml',
+              '   tasks:',
+              '     - id: task-1',
+              '       title: "Task title"',
+              '       level: l1  # or l2, l3',
+              '       deps: []',
+              '       status: pending',
+              '       issue: null',
+              '       pr: null',
+              '       acceptance: "Acceptance criteria"',
+              '       notes: ""',
+              '   ```',
+              '',
+              '3. Markdown file structure (follow `docs/agent/PLAN_TEMPLATE.md`):',
+              '   - Include task list with status',
+              '   - Link to parent issue',
+              '   - Chinese language',
+              '',
+              '4. Task levels:',
+              '   - L1: Low-risk changes (docs, tests) - auto-merge',
+              '   - L2: Medium-risk changes - requires `/approve-task` command',
+              '   - L3: High-risk changes - requires PR review',
+              '',
+              '## PR Requirements:',
+              '1. PR title: "[Plan] Issue #' + issueNumber + ': <brief description>"',
+              '2. IMPORTANT: PR body MUST include:',
+              '   ```',
+              '   Agent-Parent-Issue: ' + issueNumber,
+              '   Agent-Task-Id: plan',
+              '   ```',
+              '3. Target branch: ' + baseBranch,
+              '',
+              '## Notes:',
+              '- Break down into 3-8 atomic tasks',
+              '- Each task should be independently testable',
+              '- Assign appropriate risk levels'
+            ].join('\n');
             
             await github.rest.issues.update({
               owner: context.repo.owner,
@@ -147,7 +148,7 @@ Please create a detailed execution plan based on the approved specification.
                 target_repo: `${context.repo.owner}/${context.repo.repo}`,
                 base_branch: baseBranch,
                 custom_instructions: customInstructions,
-     custom_agent: '',
+                custom_agent: '',
                 model: ''
               }
             });
@@ -171,7 +172,7 @@ Please create a detailed execution plan based on the approved specification.
             const fs = require('fs');
             const yaml = require('js-yaml');
             
-          const config = yaml.load(fs.readFileSync('.github/agent/config.yml', 'utf8'));
+            const config = yaml.load(fs.readFileSync('.github/agent/config.yml', 'utf8'));
             
             await github.rest.issues.removeLabel({
               owner: context.repo.owner,

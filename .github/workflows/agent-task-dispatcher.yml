@@ -160,45 +160,45 @@ jobs:
               labels: [config.labels.task.in_progress]
             });
             
-            const customInstructions = `
-# Task: ${nextTask.title}
-
-**Parent Issue:** #${issueNumber}
-**Task ID:** ${nextTask.id}
-**Level:** ${nextTask.level}
-
-## Task Description
-
-${taskIssue.data.body}
-
-## Acceptance Criteria
-
-${nextTask.acceptance}
-
-## Implementation Guidelines
-
-1. Follow the acceptance criteria exactly
-2. Write tests for your changes
-3. Ensure code passes lint and tests
-4. Keep changes focused and atomic
-
-## PR Requirements
-
-1. PR title: "[${nextTask.id}] ${nextTask.title}"
-2. **CRITICAL**: PR body MUST include these markers:
-   \`\`\`
-   Agent-Parent-Issue: ${issueNumber}
-   Agent-Task-Id: ${nextTask.id}
-   \`\`\`
-3. Target branch: ${config.copilot.base_branch}
-4. Link to task issue: #${nextTask.issue}
-
-## Risk Level: ${nextTask.level.toUpperCase()}
-
-${nextTask.level === 'l1' ? '- This is a low-risk task (docs/tests only)\n- Will auto-merge after CI passes' : ''}
-${nextTask.level === 'l2' ? '- This is a medium-risk task\n- Requires `/approve-task` command after CI passes' : ''}
-${nextTask.level === 'l3' ? '- This is a high-risk task\n- Requires full PR review before merge' : ''}
-`.trim();
+            const customInstructions = [
+              '# Task: ' + nextTask.title,
+              '',
+              'Parent Issue: #' + issueNumber,
+              'Task ID: ' + nextTask.id,
+              'Level: ' + nextTask.level,
+              '',
+              '## Task Description',
+              '',
+              taskIssue.data.body,
+              '',
+              '## Acceptance Criteria',
+              '',
+              nextTask.acceptance,
+              '',
+              '## Implementation Guidelines',
+              '',
+              '1. Follow the acceptance criteria exactly',
+              '2. Write tests for your changes',
+              '3. Ensure code passes lint and tests',
+              '4. Keep changes focused and atomic',
+              '',
+              '## PR Requirements',
+              '',
+              '1. PR title: "[' + nextTask.id + '] ' + nextTask.title + '"',
+              '2. CRITICAL: PR body MUST include these markers:',
+              '   ```',
+              '   Agent-Parent-Issue: ' + issueNumber,
+              '   Agent-Task-Id: ' + nextTask.id,
+              '   ```',
+              '3. Target branch: ' + config.copilot.base_branch,
+              '4. Link to task issue: #' + nextTask.issue,
+              '',
+              '## Risk Level: ' + nextTask.level.toUpperCase(),
+              '',
+              nextTask.level === 'l1' ? '- This is a low-risk task (docs/tests only)\n- Will auto-merge after CI passes' : '',
+              nextTask.level === 'l2' ? '- This is a medium-risk task\n- Requires `/approve-task` command after CI passes' : '',
+              nextTask.level === 'l3' ? '- This is a high-risk task\n- Requires full PR review before merge' : ''
+            ].filter(line => line !== '').join('\n');
             
             await github.rest.issues.update({
               owner: context.repo.owner,
@@ -231,7 +231,8 @@ Current Task: \`${state.cursor_task_id}\`
 _This comment tracks execution state. Do not edit manually._`;
             
             await github.rest.issues.createComment({
-              owner: context.repo.owner       repo: context.repo.repo,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
               issue_number: issueNumber,
               body: stateComment
             });
