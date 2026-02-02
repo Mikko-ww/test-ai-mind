@@ -1,0 +1,61 @@
+parent_issue: 123
+spec_path: "docs/specs/issue-123.md"
+created_at: "2026-02-02T10:00:00Z"
+updated_at: "2026-02-02T10:00:00Z"
+status: "pending"
+
+tasks:
+  - id: "task-1"
+    title: "实现用户认证功能"
+    description: "实现基于JWT的用户认证系统，包括登录、注册和token刷新"
+    level: "L2"
+    status: "pending"
+    issue: null
+    pr: null
+    deps: []
+    acceptance:
+      - "用户可以使用邮箱和密码注册"
+      - "用户可以使用邮箱和密码登录"
+      - "JWT token在1小时后过期"
+      - "提供token刷新接口"
+      - "所有认证接口有完整的单元测试"
+    notes: "需要使用bcrypt加密密码，JWT secret从环境变量读取"
+    started_at: null
+    completed_at: null
+    retry_count: 0
+
+  - id: "task-2"
+    title: "添加用户认证文档"
+    description: "为认证API编写完整的文档，包括接口说明、示例和错误码"
+    level: "L1"
+    status: "pending"
+    issue: null
+    pr: null
+    deps: ["task-1"]
+    acceptance:
+      - "文档包含所有认证接口的说明"
+      - "每个接口有请求和响应示例"
+      - "列出所有可能的错误码和含义"
+    notes: "文档放在 docs/api/authentication.md"
+    started_at: null
+    completed_at: null
+    retry_count: 0
+
+  - id: "task-3"
+    title: "实现权限控制中间件"
+    description: "实现基于角色的权限控制中间件，支持admin和user两种角色"
+    level: "L3"
+    status: "pending"
+    issue: null
+    pr: null
+    deps: ["task-1"]
+    acceptance:
+      - "中间件可以验证JWT token"
+      - "中间件可以检查用户角色"
+      - "未授权请求返回401"
+      - "权限不足返回403"
+      - "有完整的单元测试和集成测试"
+    notes: "这是核心安全功能，需要仔细审查"
+    started_at: null
+    completed_at: null
+    retry_count: 0

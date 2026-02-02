@@ -425,7 +425,7 @@ Wave 3（合并策略 + CI + 恢复/对账）：
     - 对 probe PR，控制面能自动触发 `.github/workflows/agent-ci.yml` 并在 `timeouts.ci_minutes` 内产生 check-run `agent/ci`
     - 若无法产生（例如 dispatch 被限制/未运行）：进入 blocked，并评论“当前仓库无法实现全自动 CI；需要调整 Actions 设置或接受人工批准”
 
-- [ ] 1. 定义配置文件与标签体系（可配置 + 可审计）
+- [x] 1. 定义配置文件与标签体系（可配置 + 可审计）
 
   **要做什么**：
   - 设计 `.github/agent/config.yml`（非敏感）：
@@ -445,7 +445,7 @@ Wave 3（合并策略 + CI + 恢复/对账）：
   - 提供一份可机器校验的 schema（例如 `docs/agent/config.schema.json` 或等价机制），并在 CI 中对 config 做校验（校验失败则 workflow 直接失败）。
   - labels 能被自动化创建/校验：在 sandbox repo 运行后，`gh label list -R "$REPO"` 能看到计划中定义的核心 labels。
 
-- [ ] 1.5 Labels Bootstrap（幂等初始化入口写死）
+- [x] 1.5 Labels Bootstrap（幂等初始化入口写死）
 
   **要做什么**：
   - 增加固定的 bootstrap 入口：`.github/workflows/agent-bootstrap.yml`（`workflow_dispatch`）读取 `.github/agent/config.yml` 并幂等创建 labels。
@@ -455,7 +455,7 @@ Wave 3（合并策略 + CI + 恢复/对账）：
   - 在空 labels 的 sandbox repo 执行 bootstrap 后，核心 labels 全部存在。
   - 重复执行 bootstrap 不会产生错误或重复对象。
 
-- [ ] 2. 增加中文模板：Spec 与 Plan（双文件）
+- [x] 2. 增加中文模板：Spec 与 Plan（双文件）
 
   **要做什么**：
   - 增加 `docs/agent/SPEC_TEMPLATE.md`（中文）：包含范围边界、验收标准、非目标、风险、回滚。
