@@ -1,100 +1,163 @@
-name: Agent CI
+name: Agent CI Verification
 
 on:
   workflow_dispatch:
     inputs:
       pr_number:
+        description: 'Pull request number'
         required: true
-        type: string
+        type: number
       head_sha:
+        description: 'PR head SHA to verify'
         required: true
         type: string
       head_ref:
+        description: 'PR head ref to checkout'
         required: true
         type: string
 
 permissions:
   contents: read
-  checks: write
   pull-requests: read
+  checks: write
 
 jobs:
-  ci:
+  verify:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout PR code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.head_ref }}
-          
-      - name: Verify PR head SHA
-        run: |
-          CURRENT_SHA=$(git rev-parse HEAD)
-          if [ "$CURRENT_SHA" != "${{ inputs.head_sha }}" ]; then
-            echo "Error: HEAD SHA mismatch"
-            echo "Expected: ${{ inputs.head_sha }}"
-            echo "Got: $CURRENT_SHA"
-            exit 1
-          fi
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-        run: |
-          if [ -f package.json ]; then
-            npm install
-          fi
-
-      - name: Run lint
-        id: lint
-        continue-on-error: true
-        run: |
-          if [ -f package.json ] && npm run lint --if-present; then
-            echo "result=success" >> $GITHUB_OUTPUT
-          else
-            echo "result=skipped" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Run tests
-        id: test
-        continue-on-error: true
-        run: |
-          if [ -f package.json ] && npm test --if-present; then
-            echo "result=success" >> $GITHUB_OUTPUT
-          else
-            echo "result=skipped" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Create check run
+      - name: Validate PR parameters
+        id: validate
         uses: actions/github-script@v7
         with:
           script: |
-            const lintResult = '${{ steps.lint.outputs.result }}';
-            const testResult = '${{ steps.test.outputs.result }}';
+            const { pr_number, head_sha, head_ref } = context.payload.inputs;
             
-            let conclusion = 'success';
-            let summary = '✅ All checks passed';
+            // Fetch PR details
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr_number
+            });
             
-            if (lintResult === 'failure' || testResult === 'failure') {
-              conclusion = 'failure';
-              summary = '❌ Some checks failed';
+            // Validate head SHA and ref match
+            if (pr.head.sha !== head_sha) {
+              core.setFailed(`PR head SHA mismatch: expected ${head_sha}, got ${pr.head.sha}`);
+              return false;
             }
             
-            const output = {
-              title: 'Agent CI Results',
-              summary: summary,
-              text: `**Lint**: ${lintResult}\n**Tests**: ${testResult}`
-            };
+            if (pr.head.ref !== head_ref) {
+              core.setFailed(`PR head ref mismatch: expected ${head_ref}, got ${pr.head.ref}`);
+              return false;
+            }
             
-            await github.rest.checks.create({
+            core.info(`✓ PR parameters validated: #${pr_number} @ ${head_sha}`);
+            return true;
+
+      - name: Create check run (started)
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: check } = await github.rest.checks.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               name: 'agent/ci',
               head_sha: '${{ inputs.head_sha }}',
+              status: 'in_progress',
+              started_at: new Date().toISOString(),
+              output: {
+                title: 'Agent CI Verification',
+                summary: 'Running lint and tests...'
+              }
+            });
+            
+            core.setOutput('check_run_id', check.id);
+            return check.id;
+
+      - name: Checkout PR head
+        if: steps.validate.outcome == 'success'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.head_ref }}
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        if: steps.validate.outcome == 'success'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        if: steps.validate.outcome == 'success'
+        run: npm ci
+
+      - name: Run lint
+        id: lint
+        if: steps.validate.outcome == 'success'
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Run tests
+        id: test
+        if: steps.validate.outcome == 'success'
+        run: npm test
+        continue-on-error: true
+
+      - name: Update check run (completed)
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const checkRunId = ${{ steps.check.outputs.check_run_id }};
+            const validateSuccess = '${{ steps.validate.outcome }}' === 'success';
+            const lintSuccess = '${{ steps.lint.outcome }}' === 'success';
+            const testSuccess = '${{ steps.test.outcome }}' === 'success';
+            
+            let conclusion = 'success';
+            let summary = '✓ All checks passed';
+            let text = '';
+            
+            if (!validateSuccess) {
+              conclusion = 'failure';
+              summary = '✗ PR parameter validation failed';
+              text = 'The PR head SHA or ref does not match the expected values. This may indicate the PR was updated after CI was triggered.';
+            } else if (!lintSuccess || !testSuccess) {
+              conclusion = 'failure';
+              summary = '✗ CI checks failed';
+              text = '';
+              
+              if (!lintSuccess) {
+                text += '**Lint:** Failed\n\n';
+              } else {
+                text += '**Lint:** Passed\n\n';
+              }
+              
+              if (!testSuccess) {
+                text += '**Tests:** Failed\n\n';
+              } else {
+                text += '**Tests:** Passed\n\n';
+              }
+              
+              text += '\nPlease fix the failing checks and push updates to the PR.';
+            } else {
+              text = '**Lint:** Passed\n**Tests:** Passed\n\nAll CI checks completed successfully.';
+            }
+            
+            await github.rest.checks.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              check_run_id: checkRunId,
               status: 'completed',
               conclusion: conclusion,
-              output: output
+              completed_at: new Date().toISOString(),
+              output: {
+                title: 'Agent CI Verification',
+                summary: summary,
+                text: text
+              }
             });
+            
+            if (conclusion === 'failure') {
+              core.setFailed(summary);
+            }

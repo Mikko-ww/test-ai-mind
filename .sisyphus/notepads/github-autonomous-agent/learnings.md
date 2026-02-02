@@ -284,3 +284,129 @@
 **Status:**
 - Task 7 complete: 6/13 tasks (46%)
 
+
+## Task 7: CI Verification Workflow - Completed
+
+### Implementation
+- Created `.github/workflows/agent-ci.yml` with workflow_dispatch trigger
+- Implemented PR parameter validation (head_sha, head_ref)
+- Created check-run with name `agent/ci` for merge policies
+- Minimal permissions: contents:read, pull-requests:read, checks:write
+- No secrets usage (security requirement)
+
+### Key Design Decisions
+1. **Parameter Validation**: Always validate PR head SHA and ref before running CI to prevent running wrong code
+2. **Check Run Management**: Create check-run at start, update on completion with detailed status
+3. **Continue on Error**: Use continue-on-error for lint/test steps to ensure check-run always updates
+4. **Detailed Output**: Provide clear summary and text in check-run output for debugging
+
+### Files Created
+- `.github/workflows/agent-ci.yml` - CI verification workflow
+- `agent/package.json` - Node.js dependencies
+- `agent/tsconfig.json` - TypeScript configuration
+- `agent/.eslintrc.json` - ESLint configuration
+
+### Next Steps
+- Task 3: Implement intake workflow (issues:opened trigger)
+- Need to create TypeScript modules for state management, GitHub API wrappers
+
+## Task 4: Spec Merge → Plan PR - Completed
+
+### Implementation
+- Added Spec PR merge handler to `.github/workflows/agent-pr-router.yml`
+- Triggers on PR closed + merged event
+- Updates parent issue labels (spec-approved, plan-in-progress)
+- Assigns Copilot to generate Plan (YAML + MD files)
+- Custom instructions include schema reference and task breakdown guidance
+
+### Key Features
+1. **PR Type Identification**: Detects PR type based on markers and head ref
+2. **State Transitions**: Manages label transitions for parent issue
+3. **Copilot Assignment**: Uses agent_assignment API with detailed instructions
+4. **Dual File Generation**: Requests both YAML (machine) and MD (human) formats
+
+### Files Modified
+- `.github/workflows/agent-pr-router.yml` - Added PR routing and Spec/Plan handlers
+
+### Next Steps
+- Task 5: Plan merge → create task sub-issues
+- Task 6: Serial task dispatch to Copilot
+
+## Task 5: Plan Merge → Create Task Sub-Issues - Completed
+
+### Implementation
+- Created `.github/workflows/agent-task-creator.yml` (workflow_dispatch)
+- Reads plan YAML file and creates sub-issues for each task
+- Implements idempotent issue creation (checks existing issues by markers)
+- Updates plan files with issue numbers
+- Creates status update PR to persist changes
+
+### Key Features
+1. **Idempotent Creation**: Checks existing issues by Agent-Parent-Issue and Agent-Task-Id markers
+2. **Marker-Based Binding**: Uses body markers instead of title matching for reliability
+3. **Status Update PR**: Creates PR with updated plan files using Git Data API
+4. **Label Management**: Applies task, pending, and level labels to each sub-issue
+
+### Files Created
+- `.github/workflows/agent-task-creator.yml` - Task issue creation workflow
+
+### Files Modified
+- `.github/workflows/agent-pr-router.yml` - Added workflow dispatch trigger after Plan merge
+
+### Next Steps
+- Task 6: Serial task dispatch to Copilot
+- Task 8: L1/L2/L3 merge policies
+
+## Task 6: Serial Task Dispatch to Copilot - Completed
+
+### Implementation
+- Created `.github/workflows/agent-task-dispatcher.yml` (workflow_dispatch)
+- Reads state from parent issue comments
+- Enforces serial execution (only 1 task in-progress at a time)
+- Checks task dependencies before dispatch
+- Updates state with cursor tracking
+
+### Key Features
+1. **Serial Execution**: Ensures only one task is in-progress at any time
+2. **Dependency Management**: Checks all dependencies are satisfied before dispatch
+3. **State Management**: Updates cursor and version in state comment
+4. **Paused State**: Respects paused flag in state
+5. **Completion Detection**: Marks parent issue as done when all tasks complete
+
+### Files Created
+- `.github/workflows/agent-task-dispatcher.yml` - Task dispatch workflow
+
+### Next Steps
+- Task 8: L1/L2/L3 merge policies with changed files analysis
+- Task 9: Failure recovery and reconciliation
+- Task 10: Notification system
+
+## Task 8: L1/L2/L3 Merge Policies - Completed
+
+### Implementation
+- Created `.github/workflows/agent-merge-policy.yml` (workflow_dispatch)
+- Evaluates PR changed files against allowlist and sensitive globs
+- Uses minimatch for glob pattern matching
+- Implements L1 auto-merge with downgrade to L2 if unavailable
+
+### Key Features
+1. **File Analysis**: Checks all changed files against allowlist and sensitive patterns
+2. **Level Computation**: Computes level based on file changes, respects declared level
+3. **Auto-merge**: Attempts auto-merge for L1, downgrades to L2 if not available
+4. **Detailed Comments**: Provides clear explanation of policy decision
+5. **Max Files Check**: Enforces max changed files limit for L1
+
+### Merge Policy Rules
+- **L1**: All files in allowlist + CI green → auto-merge
+- **L2**: Files outside allowlist + CI green → requires `/approve-task` command
+- **L3**: Sensitive files or too many files → requires full PR review
+
+### Files Created
+- `.github/workflows/agent-merge-policy.yml` - Merge policy evaluation
+
+### Files Modified
+- `.github/workflows/agent-pr-router.yml` - Added merge policy trigger
+
+### Next Steps
+- Task 9: Failure recovery and reconciliation
+- Task 10: Notification system

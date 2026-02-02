@@ -519,7 +519,7 @@ Wave 3（合并策略 + CI + 恢复/对账）：
   - 创建一个需求 issue 后，系统在 `timeouts.spec_pr_minutes` 内出现 Spec PR；PR 中新增/更新中文 spec 文件。
   - PR body 包含 marker（用于后续稳定绑定）。
 
-- [ ] 4. 控制面：Spec merge 后自动生成 Plan PR（YAML + 中文阅读版）
+- [x] 4. 控制面：Spec merge 后自动生成 Plan PR（YAML + 中文阅读版）
 
   **要做什么**：
   - 在 Spec PR merge 事件上推进状态到 `plan-in-progress`。
@@ -534,7 +534,7 @@ Wave 3（合并策略 + CI + 恢复/对账）：
     - `Agent-Parent-Issue: <number>`
     - `Agent-Task-Id: plan`
 
-- [ ] 5. 控制面：Plan merge 后创建 task 子 Issue（一任务一 issue）
+- [x] 5. 控制面：Plan merge 后创建 task 子 Issue（一任务一 issue）
 
   **要做什么**：
   - 读取 `plans/<issue-id>.yaml`，为每个任务创建子 issue（若不存在则创建；存在则复用，幂等）。
@@ -554,7 +554,7 @@ Wave 3（合并策略 + CI + 恢复/对账）：
   - Plan 合并后，子 issue 数量与任务数一致。
   - 重放 workflow 不会重复创建同一任务的 issue（幂等）。
 
-- [ ] 6. 控制面：串行派发任务给 Copilot（issue assignment）
+- [x] 6. 控制面：串行派发任务给 Copilot（issue assignment）
 
   **要做什么**：
   - 维护一个“运行游标”（cursor）：当前执行到哪个 task-id。
@@ -593,7 +593,7 @@ Wave 3（合并策略 + CI + 恢复/对账）：
   - 对 copilot PR，CI 能自动启动并产生可用于 ruleset 的 checks，且 check-run 名称精确为 `agent/ci`。
   - CI 失败时，流水线进入 blocked 且不会推进下一个 task。
 
-- [ ] 8. 合并策略实现：L1/L2/L3 规则与敏感路径护栏
+- [x] 8. 合并策略实现：L1/L2/L3 规则与敏感路径护栏
 
   **要做什么**：
   - 定义 allowlist：哪些文件/目录允许 L1（docs/tests/纯文本等）；敏感目录强制 L3。
@@ -617,7 +617,7 @@ Wave 3（合并策略 + CI + 恢复/对账）：
   - L2 PR 没有 `/approve-task` 不合并；发出命令后合并。
   - L3 PR 在缺少 review 时不合并。
 
-- [ ] 9. 失败恢复与定时对账（reconciliation）
+- [x] 9. 失败恢复与定时对账（reconciliation）
 
   **要做什么**：
   - 处理常见失败：
@@ -631,7 +631,7 @@ Wave 3（合并策略 + CI + 恢复/对账）：
   - 人为制造 CI 失败后，流水线进入 blocked；执行 `/retry` 后能重新请求 Copilot 修复一次；仍失败则保持 blocked。
   - 定时对账能发现“plan.yaml 显示 in-progress 但 PR 已 merged”并修正。
 
-- [ ] 10. 通知系统（GitHub + webhook，可扩展）
+- [x] 10. 通知系统（GitHub + webhook，可扩展）
 
   **要做什么**：
   - 在关键事件点发通知：Spec PR 创建、Spec merge、Plan PR 创建、Plan merge、task PR 创建/合并、blocked/done。

@@ -1,0 +1,250 @@
+name: Agent PR Router
+
+on:
+  pull_request:
+    types: [opened, synchronize, closed]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  checks: write
+
+jobs:
+  route:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Identify PR type
+        id: identify
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const body = pr.body || '';
+            const headRef = pr.head.ref;
+            const author = pr.user.login;
+            
+            let prType = 'unknown';
+            let parentIssue = null;
+            let taskId = null;
+            
+            const parentMatch = body.match(/Agent-Parent-Issue:\s*(\d+)/);
+            const taskMatch = body.match(/Agent-Task-Id:\s*(\S+)/);
+            
+            if (parentMatch) parentIssue = parseInt(parentMatch[1]);
+            if (taskMatch) taskId = taskMatch[1];
+            
+            if (headRef.startsWith('agent/plan-status/')) {
+              prType = 'status';
+            } else if (taskId === 'spec') {
+              prType = 'spec';
+            } else if (taskId === 'plan') {
+              prType = 'plan';
+            } else if (headRef.startsWith('copilot/')) {
+              const config = require('./.github/agent/config.yml');
+              const allowlist = config.copilot?.bot_login_allowlist || [];
+              if (allowlist.includes(author)) {
+                prType = 'task';
+              }
+            }
+            
+            core.setOutput('pr_type', prType);
+            core.setOutput('parent_issue', parentIssue || '');
+            core.setOutput('task_id', taskId || '');
+            core.info(`PR Type: ${prType}, Parent: ${parentIssue}, Task: ${taskId}`);
+            
+            return { prType, parentIssue, taskId };
+
+      - name: Handle Spec PR merge
+        if: steps.identify.outputs.pr_type == 'spec' && github.event.action == 'closed' && github.event.pull_request.merged ==     uses: actions/github-script@v7
+        env:
+          AGENT_GH_TOKEN: ${{ secrets.AGENT_GH_TOKEN }}
+        with:
+          github-token: ${{ secrets.AGENT_GH_TOKEN }}
+          script: |
+            const issueNumber = parseInt('${{ steps.identify.outputs.parent_issue }}');
+            const fs = require('fs');
+            const yaml = require('js-yaml');
+            
+            const config = yaml.load(fs.readFileSync('.github/agent/config.yml', 'utf8'));
+            const botAssignee = config.copilot.bot_assignee;
+            const baseBranch = config.copilot.base_branch;
+            const planYamlDir = config.paths.plan_yaml_dir;
+            const planMdDir = config.paths.plan_md_dir;
+            
+            await github.rest.issues.removeLabel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              name: config.labels.parent.spec_in_progress
+            }).catch(() => {});
+            
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              labels: [config.labels.parent.spec_approved, config.labels.parent.plan_in_progress]
+            });
+            
+            const customInstructions = `
+# Task: Generate Execution Plan (YAML + Chinese Markdown)
+
+Please create a detailed execution plan based on the approved specification.
+
+## Requirements:
+1. Create TWO files:
+   - \`${planYamlDir}/issue-${issueNumber}.yaml\` - Machine-readable plan (YAML)
+   - \`${planMdDir}/issue-${issueNumber}.md\` - Human-readable plan (Chinese)
+
+2. YAML file structure (follow \`docs/agent/plan.schema.json\`):
+   \`\`\`yaml
+   tasks:
+     - id: task-1
+       title: "Task title"
+       level: l1  # or l2, l3
+       deps: []
+       status: pending
+       issue: null
+       pr: null
+       acceptance: "Acceptance criteria"
+       notes: ""
+   \`\`\`
+
+3. Markdown file structure (follow \`docs/agent/PLAN_TEMPLATE.md\`):
+   - Include task list with status
+   - Link to parent issue
+   - Chinese language
+
+4. Task levels:
+   - **L1**: Low-risk changes (docs, tests) - auto-merge
+   - **L2**: Medium-risk changes - requires \`/approve-task\` command
+   - **L3**: High-risk changes - requires PR review
+
+## PR Requirements:
+1. PR title: "[Plan] Issue #${issueNumber}: <brief description>"
+2. **IMPORTANT**: PR body MUST include:
+   \`\`\`
+   Agent-Parent-Issue: ${issueNumber}
+   Agent-Task-Id: plan
+   \`\`\`
+3. Target branch: ${bas
+
+## Notes:
+- Break down into 3-8 atomic tasks
+- Each task should be independently testable
+- Assign appropriate risk levels
+`.trim();
+            
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              assignees: [botAssignee],
+              agent_assignment: {
+                target_repo: `${context.repo.owner}/${context.repo.repo}`,
+                base_branch: baseBranch,
+                custom_instructions: customInstructions,
+     custom_agent: '',
+                model: ''
+              }
+            });
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: `✅ **Spec Approved**\n\nThe specification has been merged. I've assigned ${botAssignee} to generate an execution plan.\n\n**Next Steps:**\n1. Copilot will create a Plan PR with YAML + Chinese markdown\n2. Review the task breakdown and risk levels\n3. After merge, task sub-issues will be created automatically\n\n**Status:** \`plan-in-progress\``
+            });
+
+      - name: Handle Plan PR merge
+        if: steps.identify.outputs.pr_type == 'plan' && github.event.action == 'closed' && github.event.pull_request.merged == true
+        uses: actions/github-script@v7
+        env:
+          AGENT_GH_TOKEN: ${{ secrets.AGENT_GH_TOKEN }}
+        with:
+          github-token: ${{ secrets.AGENT_GH_TOKEN }}
+          script: |
+            const issueNumber = parseInt('${{ steps.identify.outputs.parent_issue }}');
+            const fs = require('fs');
+            const yaml = require('js-yaml');
+            
+          const config = yaml.load(fs.readFileSync('.github/agent/config.yml', 'utf8'));
+            
+            await github.rest.issues.removeLabel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              name: config.labels.parent.plan_in_progress
+            }).catch(() => {});
+            
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              labels: [config.labels.parent.plan_approved, config.labels.parent.executing]
+            });
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: `✅ **Plan Approved**\n\nThe execution plan has been merged. Creating task sub-issues...\n\n**Status:** \`executing\``
+            });
+            
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'agent-task-creator.yml',
+              ref: context.ref,
+              inputs: {
+                parent_issue: issueNumber.toString()
+              }
+            });
+            
+            core.info('✓ Triggered task creation workflow');
+
+      - name: Trigger CI for task PRs
+        if: steps.identify.outputs.pr_type == 'task' && (github.event.action == 'opened' || github.event.action == 'synchronize')
+        uses: actions/github-script@v7
+        env:
+          AGENT_GH_TOKEN: ${{ secrets.AGENT_GH_TOKEN }}
+        with:
+          github-token: ${{ secrets.AGENT_GH_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            
+            const parentIssue = '${{ steps.identify.outputs.parent_issue }}';
+            const taskId = '${{ steps.identify.outputs.task_id }}';
+            
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'agent-ci.yml',
+              ref: context.ref,
+              inputs: {
+                pr_number: pr.number.toString(),
+                head_sha: pr.head.sha,
+                head_ref: pr.head.ref
+              }
+            });
+            
+            core.info(`✓ Triggered CI for PR #${pr.number}`);
+            
+            if (parentIssue && taskId) {
+              await github.rest.actions.createWorkflowDispatch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'agent-merge-policy.yml',
+                ref: context.ref,
+                inputs: {
+                  pr_number: pr.number.toString(),
+                  parent_issue: parentIssue,
+                  task_id: taskId
+                }
+              });
+              
+              core.info(`✓ Triggered merge policy evaluation for PR #${pr.number}`);
+            }
