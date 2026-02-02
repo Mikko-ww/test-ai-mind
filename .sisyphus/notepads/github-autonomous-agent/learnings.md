@@ -158,3 +158,30 @@
 - Marker present in template
 - All required fields defined
 
+
+## Task 0: Prerequisites Documentation
+
+### Completed: 2026-02-02
+
+**What was done:**
+- Created `docs/agent/PREREQUISITES.md` - Comprehensive prerequisites guide
+
+**Content includes:**
+- Required GitHub features (Copilot, auto-merge, Actions permissions)
+- Required secrets (AGENT_GH_TOKEN with detailed permissions)
+- Optional secrets (webhook URL and signing key)
+- Repository settings (branch protection, CODEOWNERS)
+- Verification checklist
+- Troubleshooting guide for common issues
+- Security considerations
+
+**Key sections:**
+- How to check if Copilot is available
+- How to create fine-grained PAT with correct permissions
+- How to enable auto-merge
+- How to configure Actions permissions
+- Troubleshooting for common failures
+- Security best practices
+
+**Note**: This is documentation-only. The actual probe workflow (automated checking) is not implemented due to complexity blocker.
+
