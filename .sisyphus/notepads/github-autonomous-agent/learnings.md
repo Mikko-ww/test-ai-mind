@@ -131,3 +131,30 @@
 - Example YAML validated
 - All required sections present in templates
 
+
+## Task 2.5: Issue Templates
+
+### Completed: 2026-02-02
+
+**What was done:**
+- Created `.github/ISSUE_TEMPLATE/config.yml` - Issue template configuration
+- Created `.github/ISSUE_TEMPLATE/agent-request.yml` - Agent request form template
+
+**Agent request template features:**
+- Form-based template with structured fields
+- Auto-applies `agent:requested` label
+- Includes marker `<!-- agent-request -->` to identify agent requests
+- Fields: background, scope (in/out), acceptance criteria, constraints, additional info
+- Provides guidance on ChatOps commands (/pause, /resume, /abort)
+- Only accessible to repository collaborators
+
+**Marker strategy:**
+- `<!-- agent-request -->` - Identifies requirement issues (triggers intake)
+- `<!-- agent-task -->` - Will be used for task sub-issues (prevents recursion)
+- `<!--gent-probe -->` - Will be used for probe issues (prerequisite checks)
+
+**Validation:**
+- YAML syntax validated
+- Marker present in template
+- All required fields defined
+

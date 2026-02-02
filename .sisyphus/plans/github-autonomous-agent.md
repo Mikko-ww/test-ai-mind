@@ -480,7 +480,7 @@ Wave 3（合并策略 + CI + 恢复/对账）：
   - 提供 plan schema 校验（例如 `docs/agent/plan.schema.json`），并在 CI 中校验 YAML（校验失败 workflow 失败）。
   - 计划文件可 round-trip：自动化更新 task 的 `status/pr` 不会破坏 schema（执行者用单元测试覆盖该更新函数）。
 
-- [ ] 2.5 需求/任务/探测 Issue 模板（marker 注入，避免递归）
+- [x] 2.5 需求/任务/探测 Issue 模板（marker 注入，避免递归）
 
   **要做什么**：
   - 增加需求 Issue 模板（例如 `.github/ISSUE_TEMPLATE/agent-request.md` 或 issue form）：
