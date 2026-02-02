@@ -23,64 +23,11 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: npm install js-yaml
+        run: cd .github/scripts && npm install
 
       - name: Reconcile agent states
-        uses: actions/github-script@v7
+        run: node .github/scripts/reconcile-state.js
         env:
           AGENT_GH_TOKEN: ${{ secrets.AGENT_GH_TOKEN }}
-        with:
-          github-token: ${{ secrets.AGENT_GH_TOKEN }}
-          script: |
-            const fs = require('fs');
-            const yaml = require('js-yaml');
-            const config = yaml.load(fs.readFileSync('.github/agent/config.yml', 'utf8'));
-            
-            const issues = await github.paginate(github.rest.issues.listForRepo, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              labels: config.labels.parent.executing,
-              per_page: 100
-            });
-            
-            for (const issue of issues) {
-              try {
-                const planPath = `${config.paths.plan_yaml_dir}/issue-${issue.number}.yaml`;
-                if (!fs.existsSync(planPath)) continue;
-                
-                const plan = yaml.load(fs.readFileSync(planPath, 'utf8'));
-                
-                for (const task of plan.tasks) {
-                  if (task.status === 'in-progress' && task.pr) {
-                    const { data: pr } = await github.rest.pulls.get({
-                      owner: context.repo.owner,
-                      repo: context.repo.repo,
-                      pull_number: task.pr
-                    }).catch(() => ({ data: null }));
-                    
-                    if (pr && pr.merged) {
-                      await github.rest.issues.createComment({
-                        owner: context.repo.owner,
-                        repo: context.repo.repo,
-                        issue_number: issue.number,
-                        body: `🔄 **Reconciliation**: Task ${task.id} PR #${task.pr} was merged but status not updated. Triggering dispatcher...`
-                      });
-                      
-                      await github.rest.actions.createWorkflowDispatch({
-                        owner: context.repo.owner,
-                        repo: context.repo.repo,
-                        workflow_id: 'agent-task-dispatcher.yml',
-                        ref: context.ref,
-                        inputs: {
-                          parent_issue: issue.number.toString(),
-                          trigger: 'reconcile'
-                        }
-                      });
-                    }
-                  }
-                }
-              } catch (error) {
-                core.warning(`Failed to reconcile issue #${issue.number}: ${error.message}`);
-              }
-            }
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REF: ${{ github.ref }}
