@@ -48,7 +48,7 @@ async function main() {
 
     if (changedFiles.length > maxFiles) {
       computedLevel = 'l3';
-     oo many changed files (${changedFiles.length} > ${maxFiles})`;
+      reason = `Too many changed files (${changedFiles.length} > ${maxFiles})`;
     } else {
       for (const file of changedFiles) {
         let matchedSensitive = false;
@@ -112,7 +112,8 @@ async function main() {
       '### Merge Requirements',
       '',
       finalLevel === 'l1' ? 'L1 - Auto-merge\n- ✅ All files in allowlist\n- ⏳ Waiting for CI checks to pass\n- 🤖 Will auto-merge when checks are green' : '',
-      finalLevel === 'l2' ? 'L2 - Command approval required\n- ⚠️ Contains files outside allowlist\n- ⏳ Waiting for CI checks to pass\n- 👤 Requires `/approve-task` command from collaborn      finalLevel === 'l3' ? 'L3 - Full PR review required\n- ❌ Contains sensitive file changes or too many files\n- ⏳ Waiting for CI checks to pass\n- 👥 Requires full PR review approval' : ''
+      finalLevel === 'l2' ? 'L2 - Command approval required\n- ⚠️ Contains files outside allowlist\n- ⏳ Waiting for CI checks to pass\n- 👤 Requires `/approve-task` command from collaborator' : '',
+      finalLevel === 'l3' ? 'L3 - Full PR review required\n- ❌ Contains sensitive file changes or too many files\n- ⏳ Waiting for CI checks to pass\n- 👥 Requires full PR review approval' : ''
     ].filter(line => line !== '').join('\n');
 
     await github.createComment(prNumber, policyComment);
