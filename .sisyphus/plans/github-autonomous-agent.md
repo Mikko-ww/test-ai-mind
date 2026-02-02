@@ -39,6 +39,15 @@
 - **生成器**：Spec/Plan 由 GitHub Copilot coding agent 产出（通过 Issue assignment API）。
 - **CI 目标**：为 `copilot/**` PR 设计可自动执行的验证，不依赖人工点 “Approve and run workflows”。
 
+### 仓库性质（新增确认）
+
+- 目标仓库为**私有仓库**。
+
+影响与默认策略：
+- 外部用户无法创建 issue/PR（天然降低 prompt injection 面），但仍需假设“协作者账号可能被盗/误操作”，因此 **trusted actor gating 仍保留**（OWNER/MEMBER/COLLABORATOR + marker）。
+- PR 基本都来自同仓库分支（非 fork），CI 触发的不确定性更低；但由于 Copilot PR 仍可能出现“工作流不自动跑”的产品级限制，本计划继续采用 **workflow_dispatch CI** 作为固定方案。
+- Copilot 在私有仓库的可用性/授权更关键：前置检查必须明确提示“Copilot 对该 repo 是否启用、是否被策略禁用、PAT 是否满足权限”。
+
 ### 关键参考资料（外部）
 - Copilot coding agent：通过 API 把 issue 分配给 `copilot-swe-agent[bot]` 来启动任务
   - https://docs.github.com/en/copilot/how-tos/use-copilot-agents/coding-agent/assign-copilot-to-an-issue
