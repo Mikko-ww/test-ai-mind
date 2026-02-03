@@ -1,7 +1,20 @@
 name: Agent Bootstrap
 
+# This workflow can be manually triggered to check and create all required labels
+# It will:
+# - Check for missing labels
+# - Create any labels that don't exist
+# - Update existing labels if colors or descriptions have changed
+# - Provide a summary of created/updated/skipped labels
+
 on:
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run mode (only check, do not create/update)'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   issues: write
@@ -26,3 +39,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          DRY_RUN: ${{ inputs.dry_run }}

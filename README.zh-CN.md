@@ -274,16 +274,60 @@ gh workflow run agent-bootstrap.yml
 gh label list
 ```
 
-您应该看到如下标签：
-- `agent:requested`
-- `agent:spec-in-progress`
-- `agent:plan-in-progress`
-- `agent:executing`
-- `agent:done`
-- `agent:blocked`
-- `agent:task`
-- `agent:l1`, `agent:l2`, `agent:l3`
-- 等等。
+您应该看到以下所有代理标签。
+
+#### 标签参考
+
+代理使用以下标签来跟踪状态和工作流进度：
+
+**父 Issue 标签**（生命周期状态）：
+
+| 标签 | 颜色 | 描述 |
+|------|------|------|
+| `agent:requested` | 🟢 绿色 | 需求 Issue 已创建，等待生成规格说明书 |
+| `agent:spec-in-progress` | 🔵 蓝色 | Copilot 正在生成规格说明书 |
+| `agent:spec-approved` | 🟢 绿色 | 规格说明书 PR 已合并 |
+| `agent:plan-in-progress` | 🔵 蓝色 | Copilot 正在生成执行计划 |
+| `agent:plan-approved` | 🟢 绿色 | 执行计划 PR 已合并 |
+| `agent:executing` | 🟡 黄色 | 任务正在执行中 |
+| `agent:done` | 🟢 绿色 | 所有任务已成功完成 |
+| `agent:blocked` | 🔴 红色 | 流程被阻塞，需要人工干预 |
+| `agent:paused` | 🟡 黄色 | 流程已通过 /pause 命令暂停 |
+
+**任务 Issue 标签**（任务状态）：
+
+| 标签 | 颜色 | 描述 |
+|------|------|------|
+| `agent:task` | 🔵 蓝色 | 任务 Issue（不是需求） |
+| `agent:pending` | ⚪ 灰色 | 任务等待开始 |
+| `agent:in-progress` | 🟡 黄色 | 任务正在进行中 |
+| `agent:in-review` | 🔵 蓝色 | 任务 PR 等待审查/合并 |
+| `agent:cancelled` | ⚫ 深灰色 | 任务已取消 |
+
+**风险等级标签**（合并策略）：
+
+| 标签 | 颜色 | 描述 |
+|------|------|------|
+| `agent:l1` | 🟣 浅紫色 | 等级 1：允许自动合并（白名单 + CI 通过） |
+| `agent:l2` | 🟣 紫色 | 等级 2：需要 /approve-task 命令 + CI 通过 |
+| `agent:l3` | 🟣 深紫色 | 等级 3：需要完整的 PR 审查 |
+
+**PR 类型标签**：
+
+| 标签 | 颜色 | 描述 |
+|------|------|------|
+| `agent:spec-pr` | 🟠 橙色 | 规格说明书 PR |
+| `agent:plan-pr` | 🟠 橙色 | 执行计划 PR |
+| `agent:task-pr` | 🟠 橙色 | 任务实现 PR |
+| `agent:status-pr` | 🟠 橙色 | 计划状态更新 PR |
+
+**特殊标签**：
+
+| 标签 | 颜色 | 描述 |
+|------|------|------|
+| `agent:probe` | ⚫ 深灰色 | 前置检查探测 Issue |
+
+> **注意**：Bootstrap 工作流会自动创建所有这些标签，并设置正确的颜色和描述。您可以随时手动运行它以确保所有标签都存在。
 
 ## ⚙️ 配置
 

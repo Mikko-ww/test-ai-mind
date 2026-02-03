@@ -10,6 +10,7 @@ async function main() {
   try {
     const token = process.env.GITHUB_TOKEN;
     const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
+    const dryRun = process.env.DRY_RUN === 'true';
 
     if (!token || !owner || !repo) {
       core.setFailed('Missing required environment variables');
@@ -18,6 +19,10 @@ async function main() {
 
     const github = new GitHubClient(token, owner, repo);
     const config = loadConfig();
+
+    if (dryRun) {
+      core.info('🔍 Running in DRY RUN mode - no changes will be made');
+    }
 
     const labelColors = {
       'agent:requested': '0E8A16',
@@ -104,24 +109,38 @@ async function main() {
       const existing = existingLabelMap.get(labelName);
 
       if (!existing) {
-        await github.octokit.rest.issues.createLabel({
-          owner,
-          repo,
-          name: labelName,
-          color: color,
-          description: description
-        });
-        core.info(`✓ Created label: ${labelName}`);
+        if (dryRun) {
+          core.info(`[DRY RUN] Would create label: ${labelName}`);
+        } else {
+          await github.octokit.rest.issues.createLabel({
+            owner,
+            repo,
+            name: labelName,
+            color: color,
+            description: description
+          });
+          core.info(`✓ Created label: ${labelName}`);
+        }
         created++;
       } else if (existing.color !== color || existing.description !== description) {
-        await github.octokit.rest.issues.updateLabel({
-          owner,
-          repo,
-          name: labelName,
-          color: color,
-          description: description
-        });
-        core.info(`✓ Updated label: ${labelName}`);
+        if (dryRun) {
+          core.info(`[DRY RUN] Would update label: ${labelName}`);
+          if (existing.color !== color) {
+            core.info(`  Color: ${existing.color} → ${color}`);
+          }
+          if (existing.description !== description) {
+            core.info(`  Description: "${existing.description}" → "${description}"`);
+          }
+        } else {
+          await github.octokit.rest.issues.updateLabel({
+            owner,
+            repo,
+            name: labelName,
+            color: color,
+            description: description
+          });
+          core.info(`✓ Updated label: ${labelName}`);
+        }
         updated++;
       } else {
         core.info(`- Skipped label (already exists): ${labelName}`);
@@ -129,22 +148,37 @@ async function main() {
       }
     }
 
-    core.info(`\nSummary:`);
+    const mode = dryRun ? ' (DRY RUN)' : '';
+    core.info(`\nSummary${mode}:`);
     core.info(`  Created: ${created}`);
     core.info(`  Updated: ${updated}`);
     core.info(`  Skipped: ${skipped}`);
     core.info(`  Total: ${allLabels.size}`);
 
-    core.summary
-      .addHeading('Label Bootstrap Complete')
-      .addTable([
-        [{data: 'Status', header: true}, {data: 'Count', header: true}],
-        ['Created', created.toString()],
-        ['Updated', updated.toString()],
-        ['Skipped', skipped.toString()],
-        ['Total', allLabels.size.toString()]
-      ])
-      .write();
+    if (dryRun) {
+      core.summary
+        .addHeading('Label Bootstrap Check (Dry Run)')
+        .addRaw('ℹ️ This was a dry run. No labels were created or modified.\n\n')
+        .addTable([
+          [{data: 'Status', header: true}, {data: 'Count', header: true}],
+          ['Would Create', created.toString()],
+          ['Would Update', updated.toString()],
+          ['Already Correct', skipped.toString()],
+          ['Total Labels', allLabels.size.toString()]
+        ])
+        .write();
+    } else {
+      core.summary
+        .addHeading('Label Bootstrap Complete')
+        .addTable([
+          [{data: 'Status', header: true}, {data: 'Count', header: true}],
+          ['Created', created.toString()],
+          ['Updated', updated.toString()],
+          ['Skipped', skipped.toString()],
+          ['Total', allLabels.size.toString()]
+        ])
+        .write();
+    }
   } catch (error) {
     core.setFailed(error.message);
     process.exit(1);

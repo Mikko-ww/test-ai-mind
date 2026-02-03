@@ -274,16 +274,60 @@ Check that all labels were created:
 gh label list
 ```
 
-You should see labels like:
-- `agent:requested`
-- `agent:spec-in-progress`
-- `agent:plan-in-progress`
-- `agent:executing`
-- `agent:done`
-- `agent:blocked`
-- `agent:task`
-- `agent:l1`, `agent:l2`, `agent:l3`
-- etc.
+You should see all the agent labels listed below.
+
+#### Label Reference
+
+The agent uses the following labels to track state and workflow progress:
+
+**Parent Issue Labels** (lifecycle states):
+
+| Label | Color | Description |
+|-------|-------|-------------|
+| `agent:requested` | 🟢 Green | Requirement issue created, awaiting spec generation |
+| `agent:spec-in-progress` | 🔵 Blue | Copilot is generating specification document |
+| `agent:spec-approved` | 🟢 Green | Specification PR has been merged |
+| `agent:plan-in-progress` | 🔵 Blue | Copilot is generating execution plan |
+| `agent:plan-approved` | 🟢 Green | Plan PR has been merged |
+| `agent:executing` | 🟡 Yellow | Tasks are being executed |
+| `agent:done` | 🟢 Green | All tasks completed successfully |
+| `agent:blocked` | 🔴 Red | Pipeline is blocked and requires intervention |
+| `agent:paused` | 🟡 Yellow | Pipeline is paused via /pause command |
+
+**Task Issue Labels** (task states):
+
+| Label | Color | Description |
+|-------|-------|-------------|
+| `agent:task` | 🔵 Blue | Task issue (not a requirement) |
+| `agent:pending` | ⚪ Gray | Task is waiting to be started |
+| `agent:in-progress` | 🟡 Yellow | Task is currently being worked on |
+| `agent:in-review` | 🔵 Blue | Task PR is awaiting review/merge |
+| `agent:cancelled` | ⚫ Dark Gray | Task was cancelled |
+
+**Risk Level Labels** (merge policy):
+
+| Label | Color | Description |
+|-------|-------|-------------|
+| `agent:l1` | 🟣 Light Purple | Level 1: Auto-merge allowed (allowlist + CI green) |
+| `agent:l2` | 🟣 Purple | Level 2: Requires /approve-task command + CI green |
+| `agent:l3` | 🟣 Dark Purple | Level 3: Requires full PR review |
+
+**PR Type Labels**:
+
+| Label | Color | Description |
+|-------|-------|-------------|
+| `agent:spec-pr` | 🟠 Orange | Specification document PR |
+| `agent:plan-pr` | 🟠 Orange | Plan document PR |
+| `agent:task-pr` | 🟠 Orange | Task implementation PR |
+| `agent:status-pr` | 🟠 Orange | Plan status update PR |
+
+**Special Labels**:
+
+| Label | Color | Description |
+|-------|-------|-------------|
+| `agent:probe` | ⚫ Dark Gray | Probe issue for prerequisite checks |
+
+> **Note**: The bootstrap workflow automatically creates all these labels with the correct colors and descriptions. You can manually run it anytime to ensure all labels exist.
 
 ## ⚙️ Configuration
 
