@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.issue.author_association) &&
-      contains(github.event.issue.body, '<!-- agent-request -->') &&
+      (contains(github.event.issue.body, '<!-- agent-request -->') || contains(github.event.issue.body, '<!-- agent-simple-request -->')) &&
       !contains(github.event.issue.body, '<!-- agent-task -->') &&
       !contains(github.event.issue.body, '<!-- agent-probe -->')
     
@@ -36,12 +36,25 @@ jobs:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           GITHUB_REPOSITORY: ${{ github.repository }}
 
+      - name: Determine request type
+        id: request_type
+        run: |
+          if echo "${{ github.event.issue.body }}" | grep -q "<!-- agent-simple-request -->"; then
+            echo "type=simple" >> $GITHUB_OUTPUT
+            echo "label=agent:requirement-in-progress" >> $GITHUB_OUTPUT
+            echo "task_type=requirement" >> $GITHUB_OUTPUT
+          else
+            echo "type=standard" >> $GITHUB_OUTPUT
+            echo "label=agent:spec-in-progress" >> $GITHUB_OUTPUT
+            echo "task_type=spec" >> $GITHUB_OUTPUT
+          fi
+
       - name: Add labels
         run: node .github/scripts/add-labels.js
         env:
           AGENT_GH_TOKEN: ${{ secrets.AGENT_GH_TOKEN }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
-          LABELS: agent:spec-in-progress
+          LABELS: ${{ steps.request_type.outputs.label }}
           GITHUB_REPOSITORY: ${{ github.repository }}
 
       - name: Assign to Copilot
@@ -49,5 +62,5 @@ jobs:
         env:
           AGENT_GH_TOKEN: ${{ secrets.AGENT_GH_TOKEN }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
-          TASK_TYPE: spec
+          TASK_TYPE: ${{ steps.request_type.outputs.task_type }}
           GITHUB_REPOSITORY: ${{ github.repository }}

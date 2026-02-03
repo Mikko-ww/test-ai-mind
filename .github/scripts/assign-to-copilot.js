@@ -9,7 +9,7 @@ async function main() {
   try {
     const token = process.env.AGENT_GH_TOKEN || process.env.GITHUB_TOKEN;
     const issueNumber = parseInt(process.env.ISSUE_NUMBER);
-    const taskType = process.env.TASK_TYPE; // 'spec' or 'plan'
+    const taskType = process.env.TASK_TYPE; // 'requirement', 'spec' or 'plan'
     const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
 
     if (!token || !issueNumber || !taskType || !owner || !repo) {
@@ -27,7 +27,48 @@ async function main() {
     let customInstructions;
     let specTimeout;
 
-    if (taskType === 'spec') {
+    if (taskType === 'requirement') {
+      const requirementDir = config.paths.requirement_dir || 'docs/requirements';
+      specTimeout = config.timeouts.requirement_pr_minutes || 10;
+
+      customInstructions = `
+# Task: Generate Requirement Document (需求文档)
+
+Please create a comprehensive requirement document based on the user's simple request.
+
+## Requirements:
+1. Create a new file at: \`${requirementDir}/issue-${issueNumber}.md\`
+2. Follow the template structure from \`docs/agent/REQUIREMENT_TEMPLATE.md\`
+3. Analyze the user's simple description and expand it into a complete requirement document
+4. Include all sections: 需求概述, 背景分析, 功能范围, 用户故事, 功能需求, 非功能需求, 技术方案建议, 验收标准, 约束与限制, 风险评估, 实施建议
+5. Write in Chinese (中文)
+6. Be specific and detailed, but keep it practical and actionable
+
+## Analysis Guidelines:
+- Extract the core requirement from user's description
+- Identify the purpose and goals
+- Propose reasonable functional scope
+- Suggest appropriate technical solutions
+- Define clear acceptance criteria
+- Assess potential risks
+
+## PR Requirements:
+1. Create a PR with the requirement document
+2. PR title: "[Requirement] Issue #${issueNumber}: <brief description>"
+3. **IMPORTANT**: PR body MUST include these markers:
+   \`\`\`
+   Agent-Parent-Issue: ${issueNumber}
+   Agent-Task-Id: requirement
+   \`\`\`
+4. Target branch: ${baseBranch}
+
+## Notes:
+- This is a preliminary requirement document for user approval
+- After approval, a detailed Spec will be generated
+- Focus on clarity and completeness
+- Make reasonable assumptions where needed and document them
+`.trim();
+    } else if (taskType === 'spec') {
       const specDir = config.paths.spec_dir;
       specTimeout = config.timeouts.spec_pr_minutes || 20;
 
@@ -116,11 +157,21 @@ Please create a detailed execution plan based on the approved specification.
 
       core.info(`✓ Assigned issue #${issueNumber} to ${botAssignee}`);
 
-      // Add comment to notify user
-      const taskLabel = taskType === 'spec' ? 'specification' : 'execution plan';
+      let taskLabel, nextStep;
+      if (taskType === 'requirement') {
+        taskLabel = 'requirement document (需求文档)';
+        nextStep = 'generate a Spec (需求规格说明书)';
+      } else if (taskType === 'spec') {
+        taskLabel = 'specification (需求规格说明书)';
+        nextStep = 'generate a Plan (执行计划)';
+      } else {
+        taskLabel = 'execution plan (执行计划)';
+        nextStep = 'create tasks and start execution';
+      }
+
       await github.createComment(
         issueNumber,
-        `🤖 **Agent Started**\n\nI've assigned this issue to ${botAssignee} to generate a Chinese ${taskLabel}.\n\n**Next Steps:**\n1. Copilot will create a ${taskType.charAt(0).toUpperCase() + taskType.slice(1)} PR within ${specTimeout} minutes\n2. Review and approve the ${taskType.charAt(0).toUpperCase() + taskType.slice(1)} PR\n3. After merge, the system will automatically ${taskType === 'spec' ? 'generate a Plan' : 'create tasks and start execution'}\n\n**Status:** \`${taskType}-in-progress\``
+        `🤖 **Agent Started**\n\nI've assigned this issue to ${botAssignee} to generate a Chinese ${taskLabel}.\n\n**Next Steps:**\n1. Copilot will create a ${taskType.charAt(0).toUpperCase() + taskType.slice(1)} PR within ${specTimeout} minutes\n2. Review and approve the ${taskType.charAt(0).toUpperCase() + taskType.slice(1)} PR\n3. After merge, the system will automatically ${nextStep}\n\n**Status:** \`${taskType}-in-progress\``
       );
     } catch (error) {
       core.setFailed(`Failed to assign to Copilot: ${error.message}`);

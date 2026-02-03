@@ -6,6 +6,7 @@ copilot:
   base_branch: "main"
 
 paths:
+  requirement_dir: "docs/requirements"
   spec_dir: "docs/specs"
   plan_yaml_dir: "plans"
   plan_md_dir: "plans"
@@ -13,6 +14,8 @@ paths:
 labels:
   parent:
     requested: "agent:requested"
+    requirement_in_progress: "agent:requirement-in-progress"
+    requirement_approved: "agent:requirement-approved"
     spec_in_progress: "agent:spec-in-progress"
     spec_approved: "agent:spec-approved"
     plan_in_progress: "agent:plan-in-progress"
@@ -34,6 +37,7 @@ labels:
     l2: "agent:l2"
     l3: "agent:l3"
   pr:
+    requirement: "agent:requirement-pr"
     spec: "agent:spec-pr"
     plan: "agent:plan-pr"
     task: "agent:task-pr"
@@ -79,6 +83,7 @@ ci:
     test: "npm test"
 
 timeouts:
+  requirement_pr_minutes: 10
   spec_pr_minutes: 20
   plan_pr_minutes: 20
   task_pr_minutes: 45

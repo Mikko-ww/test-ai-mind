@@ -26,6 +26,8 @@ async function main() {
 
     const labelColors = {
       'agent:requested': '0E8A16',
+      'agent:requirement-in-progress': '1D76DB',
+      'agent:requirement-approved': '0E8A16',
       'agent:spec-in-progress': '1D76DB',
       'agent:spec-approved': '0E8A16',
       'agent:plan-in-progress': '1D76DB',
@@ -42,6 +44,7 @@ async function main() {
       'agent:l1': 'D4C5F9',
       'agent:l2': '9B51E0',
       'agent:l3': '5319E7',
+      'agent:requirement-pr': 'FF9800',
       'agent:spec-pr': 'FF9800',
       'agent:plan-pr': 'FF9800',
       'agent:task-pr': 'FF9800',
@@ -50,7 +53,9 @@ async function main() {
     };
 
     const labelDescriptions = {
-      'agent:requested': 'Requirement issue created, awaiting spec generation',
+      'agent:requested': 'Requirement issue created, awaiting processing',
+      'agent:requirement-in-progress': 'Copilot is generating requirement document',
+      'agent:requirement-approved': 'Requirement document PR has been merged',
       'agent:spec-in-progress': 'Copilot is generating specification document',
       'agent:spec-approved': 'Specification PR has been merged',
       'agent:plan-in-progress': 'Copilot is generating execution plan',
@@ -67,6 +72,7 @@ async function main() {
       'agent:l1': 'Level 1: Auto-merge allowed (allowlist + CI green)',
       'agent:l2': 'Level 2: Requires /approve-task command + CI green',
       'agent:l3': 'Level 3: Requires full PR review',
+      'agent:requirement-pr': 'Requirement document PR',
       'agent:spec-pr': 'Specification document PR',
       'agent:plan-pr': 'Plan document PR',
       'agent:task-pr': 'Task implementation PR',
