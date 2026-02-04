@@ -1,8 +1,0 @@
-blank_issues_enabled: false
-contact_links:
-  - name: "📖 Documentation"
-    url: "https://github.com/Mikko-ww/ai-auto-mind/blob/main/docs/agent/CONFIG.md"
-    about: "查看Agent系统配置文档"
-  - name: "❓ Questions & Support"
-    url: "https://github.com/Mikko-ww/ai-auto-mind/discussions"
-    about: "在Discussions中提问或寻求帮助"
