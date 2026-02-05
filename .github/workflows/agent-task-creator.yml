@@ -1,0 +1,45 @@
+name: Agent Task Creator
+
+on:
+  workflow_dispatch:
+    inputs:
+      parent_issue:
+        description: 'Parent issue number'
+        required: true
+        type: number
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  create-tasks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          npm install js-yaml @octokit/rest
+
+      - name: Create task issues
+        run: node .github/scripts/create-tasks.js
+        env:
+          AGENT_GH_TOKEN: ${{ secrets.AGENT_GH_TOKEN }}
+          PARENT_ISSUE: ${{ inputs.parent_issue }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+
+      - name: Create status update PR
+        run: node .github/scripts/create-status-pr.js
+        env:
+          AGENT_GH_TOKEN: ${{ secrets.AGENT_GH_TOKEN }}
+          PARENT_ISSUE: ${{ inputs.parent_issue }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REF: ${{ github.ref }}

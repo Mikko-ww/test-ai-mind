@@ -1,0 +1,96 @@
+name: Agent CI Verification
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'Pull request number'
+        required: true
+        type: number
+      head_sha:
+        description: 'PR head SHA to verify'
+        required: true
+        type: string
+      head_ref:
+        description: 'PR head ref to checkout'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: read
+  checks: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install script dependencies
+        run: cd .github/scripts && npm install
+
+      - name: Validate PR parameters
+        id: validate
+        run: node .github/scripts/validate-pr.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+          HEAD_REF: ${{ inputs.head_ref }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+
+      - name: Create check run (started)
+        id: check
+        run: node .github/scripts/create-check-run.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+
+      - name: Checkout PR head
+        if: steps.validate.outputs.valid == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.head_ref }}
+          fetch-depth: 1
+
+      - name: Setup Node.js for project
+        if: steps.validate.outputs.valid == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        if: steps.validate.outputs.valid == 'true'
+        run: npm ci
+
+      - name: Run lint
+        id: lint
+        if: steps.validate.outputs.valid == 'true'
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Run tests
+        id: test
+        if: steps.validate.outputs.valid == 'true'
+        run: npm test
+        continue-on-error: true
+
+      - name: Update check run (completed)
+        if: always()
+        run: node .github/scripts/update-check-run.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHECK_RUN_ID: ${{ steps.check.outputs.check_run_id }}
+          VALIDATE_SUCCESS: ${{ steps.validate.outcome == 'success' }}
+          LINT_SUCCESS: ${{ steps.lint.outcome == 'success' }}
+          TEST_SUCCESS: ${{ steps.test.outcome == 'success' }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
