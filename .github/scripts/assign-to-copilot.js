@@ -141,11 +141,22 @@ Please create a detailed execution plan based on the approved specification.
 
     try {
       // Assign issue to Copilot with custom instructions
-      await github.octokit.rest.issues.update({
-        owner,
-        repo,
-        issue_number: issueNumber,
-        assignees: [botAssignee],
+      // await github.octokit.rest.issues.update({
+      //   owner,
+      //   repo,
+      //   issue_number: issueNumber,
+      //   assignees: [botAssignee],
+      //   agent_assignment: {
+      //     target_repo: repoFullName,
+      //     base_branch: baseBranch,
+      //     custom_instructions: customInstructions,
+      //     custom_agent: '',
+      //     model: ''
+      //   }
+      // });
+
+      await github.updateIssue(issueNumber, {
+        // assignees: [botAssignee],
         agent_assignment: {
           target_repo: repoFullName,
           base_branch: baseBranch,
@@ -154,6 +165,8 @@ Please create a detailed execution plan based on the approved specification.
           model: ''
         }
       });
+
+
 
       core.info(`✓ Assigned issue #${issueNumber} to ${botAssignee}`);
 
