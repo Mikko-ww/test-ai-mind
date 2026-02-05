@@ -96,3 +96,5 @@ body:
         - `/pause` - 暂停任务派发
         - `/resume` - 恢复任务派发
         - `/abort` - 终止整个流水线
+        
+        <!-- agent-request -->

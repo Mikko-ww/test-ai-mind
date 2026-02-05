@@ -13,9 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.issue.author_association) &&
-      (startsWith(github.event.issue.title, '[Request]') || startsWith(github.event.issue.title, '[Simple Request]')) &&
-      !contains(github.event.issue.labels.*.name, 'agent:task') &&
-      !contains(github.event.issue.labels.*.name, 'agent:probe')
+      (contains(github.event.issue.body, '<!-- agent-request -->') || contains(github.event.issue.body, '<!-- agent-simple-request -->')) &&
+      !contains(github.event.issue.body, '<!-- agent-task -->') &&
+      !contains(github.event.issue.body, '<!-- agent-probe -->')
     
     steps:
       - name: Checkout repository
@@ -39,7 +39,7 @@ jobs:
       - name: Determine request type
         id: request_type
         run: |
-          if [[ "${{ github.event.issue.title }}" == "[Simple Request]"* ]]; then
+          if echo "${{ github.event.issue.body }}" | grep -q "<!-- agent-simple-request -->"; then
             echo "type=simple" >> $GITHUB_OUTPUT
             echo "label=agent:requirement-in-progress" >> $GITHUB_OUTPUT
             echo "task_type=requirement" >> $GITHUB_OUTPUT
