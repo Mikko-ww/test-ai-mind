@@ -84,5 +84,21 @@ body:
         - `/pause` - 暂停任务派发
         - `/resume` - 恢复任务派发
         - `/abort` - 终止整个流水线
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
         
-        <!-- agent-simple-request -->
+        ### 系统指纹（请勿修改）
+        为保证自动化流程触发，请不要修改下面字段内容。
+        修改或删除将导致自动化无法执行。
+
+  - type: textarea
+    id: fingerprint
+    attributes:
+      label: "系统指纹（请勿修改）"
+      description: "修改或删除将导致自动化流程无法执行"
+      value: "<!-- agent-simple-request -->"
+    validations:
+      required: true

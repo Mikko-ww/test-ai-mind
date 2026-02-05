@@ -13,9 +13,11 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.issue.author_association) &&
-      (contains(github.event.issue.body, '<!-- agent-request -->') || contains(github.event.issue.body, '<!-- agent-simple-request -->')) &&
-      !contains(github.event.issue.body, '<!-- agent-task -->') &&
-      !contains(github.event.issue.body, '<!-- agent-probe -->')
+      contains(github.event.issue.labels.*.name, 'agent:requested') &&
+      (
+        contains(github.event.issue.body, '<!-- agent-request -->') ||
+        contains(github.event.issue.body, '<!-- agent-simple-request -->')
+      )
     
     steps:
       - name: Checkout repository
