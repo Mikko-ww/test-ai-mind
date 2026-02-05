@@ -1,4 +1,6 @@
 name: Agent Intake
+run-name: "Agent Intake • #${{ github.event.issue.number }} • ${{ github.event.issue.title }}"
+
 
 on:
   issues:
