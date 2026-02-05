@@ -84,5 +84,11 @@ body:
         - `/pause` - 暂停任务派发
         - `/resume` - 恢复任务派发
         - `/abort` - 终止整个流水线
-        
-        <!-- agent-simple-request -->
+
+  - type: textarea
+    id: marker
+    attributes:
+      label: "标记"
+      value: "<!-- agent-simple-request -->"
+    validations:
+      required: false
