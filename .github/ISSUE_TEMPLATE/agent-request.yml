@@ -97,15 +97,6 @@ body:
         - `/resume` - 恢复任务派发
         - `/abort` - 终止整个流水线
 
-  - type: markdown
-    attributes:
-      value: |
-        ---
-        
-        ### 系统指纹（请勿修改）
-        为保证自动化流程触发，请不要修改下面字段内容。
-        修改或删除将导致自动化无法执行。
-
   - type: textarea
     id: fingerprint
     attributes:
