@@ -49,18 +49,10 @@ async function main() {
       text = '**Lint:** Passed\n**Tests:** Passed\n\nAll CI checks completed successfully.';
     }
 
-    await github.octokit.rest.checks.update({
-      owner,
-      repo,
-      check_run_id: checkRunId,
-      status: 'completed',
-      conclusion: conclusion,
-      completed_at: new Date().toISOString(),
-      output: {
-        title: 'Agent CI Verification',
-        summary: summary,
-        text: text
-      }
+    await github.updateCheckRun(checkRunId, 'completed', conclusion, {
+      title: 'Agent CI Verification',
+      summary: summary,
+      text: text
     });
 
     core.info(`✓ Check run updated: ${conclusion}`);

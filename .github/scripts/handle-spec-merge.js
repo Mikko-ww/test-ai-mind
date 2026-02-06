@@ -76,7 +76,7 @@ async function main() {
     ]);
 
     await github.updateIssue(issueNumber, {
-      // assignees: [config.copilot.bot_assignee],
+      assignees: [config.copilot.bot_assignee],
       agent_assignment: {
         target_repo: `${owner}/${repo}`,
         base_branch: config.copilot.base_branch,

@@ -23,98 +23,36 @@ async function main() {
     const branchName = `agent/plan-status/${issueNumber}/link-issues`;
     const baseBranch = config.copilot.base_branch;
 
-    const baseRef = await github.octokit.rest.git.getRef({
-      owner,
-      repo,
-      ref: `heads/${baseBranch}`
-    });
-
-    try {
-      await github.octokit.rest.git.createRef({
-        owner,
-        repo,
-        ref: `refs/heads/${branchName}`,
-        sha: baseRef.data.object.sha
-      });
-    } catch (e) {
-      await github.octokit.rest.git.updateRef({
-        owner,
-        repo,
-        ref: `heads/${branchName}`,
-        sha: baseRef.data.object.sha,
-        force: true
-      });
-    }
-
     const planYamlPath = `${config.paths.plan_yaml_dir}/issue-${issueNumber}.yaml`;
     const planMdPath = `${config.paths.plan_md_dir}/issue-${issueNumber}.md`;
 
     const yamlContent = fs.readFileSync(planYamlPath, 'utf8');
     const mdContent = fs.readFileSync(planMdPath, 'utf8');
 
-    const yamlBlob = await github.octokit.rest.git.createBlob({
-      owner,
-      repo,
-      content: Buffer.from(yamlContent).toString('base64'),
-      encoding: 'base64'
-    });
-
-    const mdBlob = await github.octokit.rest.git.createBlob({
-      owner,
-      repo,
-      content: Buffer.from(mdContent).toString('base64'),
-      encoding: 'base64'
-    });
-
-    const baseTree = await github.octokit.rest.git.getTree({
-      owner,
-      repo,
-      tree_sha: baseRef.data.object.sha
-    });
-
-    const newTree = await github.octokit.rest.git.createTree({
-      owner,
-      repo,
-      base_tree: baseTree.data.sha,
-      tree: [
+    await github.commitFiles(
+      branchName,
+      `chore(agent): link task issues to plan #${issueNumber}`,
+      [
         {
           path: planYamlPath,
-          mode: '100644',
-          type: 'blob',
-          sha: yamlBlob.data.sha
+          content: yamlContent,
+          encoding: 'utf-8'
         },
         {
           path: planMdPath,
-          mode: '100644',
-          type: 'blob',
-          sha: mdBlob.data.sha
+          content: mdContent,
+          encoding: 'utf-8'
         }
-      ]
-    });
+      ],
+      baseBranch
+    );
 
-    const commit = await github.octokit.rest.git.createCommit({
-      owner,
-      repo,
-      message: `chore(agent): link task issues to plan #${issueNumber}`,
-      tree: newTree.data.sha,
-      parents: [baseRef.data.object.sha]
-    });
-
-    await github.octokit.rest.git.updateRef({
-      owner,
-      repo,
-      ref: `heads/${branchName}`,
-      sha: commit.data.sha
-    });
-
-    const existingPRs = await github.octokit.rest.pulls.list({
-      owner,
-      repo,
+    const existingPRs = await github.listPRs({
       head: `${owner}:${branchName}`,
       state: 'open'
     });
 
-    if (existingPRs.data.length === 0) {
+    if (existingPRs.length === 0) {
       await github.createPR(
         `[agent-status] Update plan with task issues #${issueNumber}`,
         branchName,

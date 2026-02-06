@@ -16,18 +16,7 @@ async function main() {
 
     const github = new GitHubClient(token, owner, repo);
 
-    const check = await github.octokit.rest.checks.create({
-      owner,
-      repo,
-      name: 'agent/ci',
-      head_sha: headSha,
-      status: 'in_progress',
-      started_at: new Date().toISOString(),
-      output: {
-        title: 'Agent CI Verification',
-        summary: 'Running lint and tests...'
-      }
-    });
+    const check = await github.createCheckRun('agent/ci', headSha, 'in_progress');
 
     core.setOutput('check_run_id', check.data.id);
     core.info(`✓ Check run created: ${check.data.id}`);

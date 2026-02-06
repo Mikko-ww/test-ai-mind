@@ -30,13 +30,9 @@ async function main() {
       return;
     }
 
-    const checks = await github.octokit.rest.checks.listForRef({
-      owner,
-      repo,
-      ref: pr.head.sha
-    });
+    const checkRuns = await github.listCheckRuns(pr.head.sha);
 
-    const ciCheck = checks.data.check_runs.find(c => c.name === config.ci.required_check_name);
+    const ciCheck = checkRuns.find(c => c.name === config.ci.required_check_name);
     if (!ciCheck || ciCheck.conclusion !== 'success') {
       await github.createComment(
         prNumber,
@@ -46,12 +42,7 @@ async function main() {
     }
 
     try {
-      await github.octokit.rest.pulls.merge({
-        owner,
-        repo,
-        pull_number: prNumber,
-        merge_method: 'squash'
-      });
+      await github.mergePR(prNumber, 'squash');
 
       await github.createComment(
         prNumber,

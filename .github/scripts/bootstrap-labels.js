@@ -59,14 +59,10 @@ async function main() {
 
     collectLabels(config.labels);
 
-    const existingLabels = await github.octokit.rest.issues.listLabelsForRepo({
-      owner,
-      repo,
-      per_page: 100
-    });
+    const existingLabels = await github.listLabels(100);
 
     const existingLabelMap = new Map(
-      existingLabels.data.map(label => [label.name, label])
+      existingLabels.map(label => [label.name, label])
     );
 
     let created = 0;
@@ -83,13 +79,7 @@ async function main() {
         if (dryRun) {
           core.info(`[DRY RUN] Would create label: ${labelName}`);
         } else {
-          await github.octokit.rest.issues.createLabel({
-            owner,
-            repo,
-            name: labelName,
-            color: color,
-            description: description
-          });
+          await github.createLabel(labelName, color, description);
           core.info(`✓ Created label: ${labelName}`);
         }
         created++;
@@ -103,10 +93,7 @@ async function main() {
             core.info(`  Description: "${existing.description}" → "${description}"`);
           }
         } else {
-          await github.octokit.rest.issues.updateLabel({
-            owner,
-            repo,
-            name: labelName,
+          await github.updateLabel(labelName, {
             color: color,
             description: description
           });

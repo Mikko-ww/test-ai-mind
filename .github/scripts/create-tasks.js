@@ -34,15 +34,10 @@ async function main() {
       return;
     }
 
-    const { Octokit } = require('@octokit/rest');
-    const octokit = new Octokit({ auth: token });
-    
-    const existingIssues = await octokit.paginate(octokit.rest.issues.listForRepo, {
-      owner,
-      repo,
+    const existingIssues = await github.listIssues({
       labels: config.labels.task.task,
       state: 'all',
-      per_page: 100
+      perPage: 100
     });
 
     const taskIssueMap = new Map();
@@ -89,19 +84,17 @@ async function main() {
           'Agent-Task-Id: ' + task.id
         ].join('\n');
 
-        const newIssue = await github.octokit.rest.issues.create({
-          owner,
-          repo,
-          title: `[Task ${task.id}] ${task.title}`,
-          body: issueBody,
-          labels: [
+        const newIssue = await github.createIssue(
+          `[Task ${task.id}] ${task.title}`,
+          issueBody,
+          [
             config.labels.task.task,
             config.labels.task.pending,
             config.labels.level[task.level]
           ]
-        });
+        );
 
-        taskIssueNumber = newIssue.data.number;
+        taskIssueNumber = newIssue.number;
         core.info(`✓ Created task issue #${taskIssueNumber} for ${task.id}`);
       } else {
         core.info(`✓ Task issue #${taskIssueNumber} already exists for ${task.id}`);

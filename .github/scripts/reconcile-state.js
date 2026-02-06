@@ -20,12 +20,10 @@ async function main() {
     const github = new GitHubClient(token, owner, repo);
     const config = loadConfig();
 
-    const issues = await github.octokit.paginate(github.octokit.rest.issues.listForRepo, {
-      owner,
-      repo,
+    const issues = await github.listIssues({
       state: 'open',
       labels: config.labels.parent.executing,
-      per_page: 100
+      perPage: 100
     });
 
     let reconciledCount = 0;
@@ -39,27 +37,17 @@ async function main() {
 
         for (const task of plan.tasks) {
           if (task.status === 'in-progress' && task.pr) {
-            const pr = await github.octokit.rest.pulls.get({
-              owner,
-              repo,
-              pull_number: task.pr
-            }).catch(() => ({ data: null }));
+            const pr = await github.getPR(task.pr).catch(() => null);
 
-            if (pr.data && pr.data.merged) {
+            if (pr && pr.merged) {
               await github.createComment(
                 issue.number,
                 `🔄 **Reconciliation**: Task ${task.id} PR #${task.pr} was merged but status not updated. Triggering dispatcher...`
               );
 
-              await github.octokit.rest.actions.createWorkflowDispatch({
-                owner,
-                repo,
-                workflow_id: 'agent-task-dispatcher.yml',
-                ref,
-                inputs: {
-                  parent_issue: issue.number.toString(),
-                  trigger: 'reconcile'
-                }
+              await github.createWorkflowDispatch('agent-task-dispatcher.yml', ref, {
+                parent_issue: issue.number.toString(),
+                trigger: 'reconcile'
               });
 
               reconciledCount++;

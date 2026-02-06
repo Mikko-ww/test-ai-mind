@@ -32,12 +32,7 @@ async function main() {
       core.info(`✓ Agent paused for issue #${issueNumber}`);
     } else if (command === 'resume') {
       try {
-        await github.octokit.rest.issues.removeLabel({
-          owner,
-          repo,
-          issue_number: issueNumber,
-          name: config.labels.parent.paused
-        });
+        await github.removeLabel(issueNumber, config.labels.parent.paused);
       } catch (error) {
         core.warning(`Could not remove paused label: ${error.message}`);
       }
@@ -47,15 +42,9 @@ async function main() {
         `▶️ **Agent Resumed**\n\nTask dispatch resumed by @${actor}.`
       );
 
-      await github.octokit.rest.actions.createWorkflowDispatch({
-        owner,
-        repo,
-        workflow_id: 'agent-task-dispatcher.yml',
-        ref,
-        inputs: {
-          parent_issue: issueNumber.toString(),
-          trigger: 'resume'
-        }
+      await github.createWorkflowDispatch('agent-task-dispatcher.yml', ref, {
+        parent_issue: issueNumber.toString(),
+        trigger: 'resume'
       });
 
       core.info(`✓ Agent resumed for issue #${issueNumber}`);
