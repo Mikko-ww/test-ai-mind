@@ -87,9 +87,10 @@ jobs:
 
       - name: Extract parent issue number
         id: extract_issue
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
-          BODY="${{ github.event.pull_request.body }}"
-          ISSUE_NUM=$(echo "$BODY" | grep -oP 'Agent-Parent-Issue:\s*\K\d+' || echo "")
+          ISSUE_NUM=$(echo "$PR_BODY" | grep -oP 'Agent-Parent-Issue:\s*\K\d+' || echo "")
           if [ -z "$ISSUE_NUM" ]; then
             echo "Error: Could not extract parent issue number"
             exit 1
