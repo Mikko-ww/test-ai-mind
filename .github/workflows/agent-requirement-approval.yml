@@ -97,6 +97,13 @@ jobs:
           fi
           echo "issue_number=$ISSUE_NUM" >> $GITHUB_OUTPUT
 
+      - name: Reopen parent issue if closed
+        run: node .github/scripts/reopen-issue.js
+        env:
+          AGENT_GH_TOKEN: ${{ secrets.AGENT_GH_TOKEN }}
+          ISSUE_NUMBER: ${{ steps.extract_issue.outputs.issue_number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+
       - name: Update parent issue labels
         run: node .github/scripts/update-labels.js
         env:

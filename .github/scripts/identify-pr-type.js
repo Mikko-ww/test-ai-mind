@@ -20,6 +20,8 @@ async function main() {
     
     if (headRef.startsWith('agent/plan-status/')) {
       prType = 'status';
+    } else if (markers.taskId === 'requirement') {
+      prType = 'requirement';
     } else if (markers.taskId === 'spec') {
       prType = 'spec';
     } else if (markers.taskId === 'plan') {

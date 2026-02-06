@@ -1,48 +1,5 @@
-# ============================================================================
-# Agent Intake Workflow - 代理需求接收工作流
-# ============================================================================
-#
-# 【工作流用途】
-# 这个工作流是 Agent 系统的入口点，负责接收和处理新的开发需求请求。
-# 当用户创建一个 Agent Request Issue 时，此工作流会启动整个自动化开发流程。
-#
-# 【触发方式】
-# - Issue 创建时（issues.opened）
-# - 必须包含 'agent:requested' 标签
-# - 必须包含特定的 HTML 注释标记（agent-request 或 agent-simple-request）
-# - 仅响应有权限用户（OWNER、MEMBER、COLLABORATOR）
-#
-# 【主要功能】
-# 1. 初始化状态：为新请求创建初始状态和元数据
-# 2. 确定请求类型：
-#    - 标准请求（agent-request）：需要生成规格说明书（Spec）
-#    - 简单请求（agent-simple-request）：直接生成需求文档（Requirement）
-# 3. 添加标签：根据请求类型添加相应的进度标签
-# 4. 分配给 Copilot：将任务分配给 GitHub Copilot 进行处理
-#
-# 【工作流程】
-# 1. 用户创建 Agent Request Issue
-# 2. 工作流验证 Issue 格式和权限
-# 3. 初始化 Agent 状态
-# 4. 识别请求类型（标准/简单）
-# 5. 添加进度标签（spec-in-progress 或 requirement-in-progress）
-# 6. 分配给 Copilot 生成文档
-# 7. Copilot 创建 PR（Spec PR 或 Requirement PR）
-#
-# 【请求类型】
-# - 标准请求：复杂功能，需要详细的规格说明书
-# - 简单请求：简单功能，直接生成需求文档
-#
-# 【使用场景】
-# - 启动新功能开发
-# - 提交 bug 修复请求
-# - 请求代码重构
-# - 任何需要 Agent 自动化处理的开发任务
-#
-# ============================================================================
-
 name: Agent Intake
-run-name: "Agent Intake • #${{ github.event.issue.number }} • ${github.event.issue.title}"
+run-name: "Agent Intake • #${{ github.event.issue.number }} • ${{ github.event.issue.title }}"
 
 on:
   issues:

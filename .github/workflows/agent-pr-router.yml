@@ -96,6 +96,14 @@ jobs:
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           GITHUB_REPOSITORY: ${{ github.repository }}
 
+      - name: Handle Requirement PR merge
+        if: steps.identify.outputs.pr_type == 'requirement' && github.event.action == 'closed' && github.event.pull_request.merged == true
+        run: node .github/scripts/handle-requirement-merge.js
+        env:
+          AGENT_GH_TOKEN: ${{ secrets.AGENT_GH_TOKEN }}
+          PARENT_ISSUE: ${{ steps.identify.outputs.parent_issue }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+
       - name: Handle Spec PR merge
         if: steps.identify.outputs.pr_type == 'spec' && github.event.action == 'closed' && github.event.pull_request.merged == true
         run: node .github/scripts/handle-spec-merge.js
