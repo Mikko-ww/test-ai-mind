@@ -48,30 +48,10 @@ labels:
 merge_policy:
   l1:
     allowlist_globs:
-      - "docs/**"
-      - "*.md"
-      - "tests/**"
-      - "**/*.test.js"
-      - "**/*.test.ts"
-      - "**/*.spec.js"
-      - "**/*.spec.ts"
-      - "plans/**"
+      - "!(.github)/**"
   sensitive_globs:
     - ".github/workflows/**"
     - ".github/actions/**"
-    - "**/*.yml"
-    - "**/*.yaml"
-    - ".github/**"
-    - "package.json"
-    - "package-lock.json"
-    - "yarn.lock"
-    - "pnpm-lock.yaml"
-    - "Dockerfile"
-    - "docker-compose.yml"
-    - ".env*"
-    - "**/*secret*"
-    - "**/*credential*"
-    - "**/*token*"
   max_changed_files_l1: 300
 
 ci:
