@@ -102,11 +102,3 @@ jobs:
           AGENT_GH_TOKEN: ${{ secrets.AGENT_GH_TOKEN }}
           PARENT_ISSUE: ${{ inputs.parent_issue }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-
-      - name: Create status update PR
-        run: node .github/scripts/create-status-pr.js
-        env:
-          AGENT_GH_TOKEN: ${{ secrets.AGENT_GH_TOKEN }}
-          PARENT_ISSUE: ${{ inputs.parent_issue }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_REF: ${{ github.ref }}

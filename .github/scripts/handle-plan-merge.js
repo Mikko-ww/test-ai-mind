@@ -11,7 +11,7 @@ async function main() {
     const token = process.env.AGENT_GH_TOKEN || process.env.GITHUB_TOKEN;
     const epicIssueNumber = parseInt(process.env.PARENT_ISSUE);
     const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
-    const ref = process.env.GITHUB_REF || 'refs/heads/main';
+    const baseRefFromEvent = process.env.BASE_REF || '';
 
     if (!token || !epicIssueNumber || !owner || !repo) {
       core.setFailed('Missing required environment variables');
@@ -46,7 +46,8 @@ async function main() {
       '',
       '**Next Phase:** Task Execution',
       '- Creating task sub-issues...',
-      '- Tasks will be assigned to Copilot for implementation',
+      '- Task issues will be created with pending status',
+      '- You can test dispatch manually after creation',
       '',
       '**Workflow Progress:**',
       '- ✅ Requirement Document',
@@ -55,9 +56,11 @@ async function main() {
       '- 🔄 Implementation (starting)'
     ].join('\n'));
 
+    const dispatchRef = baseRefFromEvent || config.copilot.base_branch || 'main';
+
     await github.createWorkflowDispatch(
       'agent-task-creator.yml',
-      ref.replace('refs/heads/', ''),
+      dispatchRef,
       { parent_issue: epicIssueNumber.toString() }
     );
 

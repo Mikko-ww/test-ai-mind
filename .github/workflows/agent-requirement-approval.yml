@@ -71,7 +71,8 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       github.event.pull_request.merged == true &&
-      contains(github.event.pull_request.body, 'Agent-Task-Id: requirement')
+      contains(github.event.pull_request.body, 'Agent-Task-Id: requirement') &&
+      !contains(github.event.pull_request.body, 'Agent-Phase:')
     
     steps:
       - name: Checkout repository

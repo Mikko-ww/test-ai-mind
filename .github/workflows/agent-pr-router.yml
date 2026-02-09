@@ -119,7 +119,7 @@ jobs:
           AGENT_GH_TOKEN: ${{ secrets.AGENT_GH_TOKEN }}
           PARENT_ISSUE: ${{ steps.identify.outputs.parent_issue }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_REF: ${{ github.ref }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
 
       - name: Trigger CI for task PRs
         if: steps.identify.outputs.pr_type == 'task' && (github.event.action == 'opened' || github.event.action == 'synchronize')

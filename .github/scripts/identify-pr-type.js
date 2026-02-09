@@ -7,7 +7,7 @@ async function main() {
   try {
     const prNumber = parseInt(process.env.PR_NUMBER);
     const prBody = process.env.PR_BODY || '';
-    const headRef = process.env.HEAD_REF || '';
+    const headRef = process.env.HEAD_REF || process.env.PR_HEAD_REF || '';
     const author = process.env.PR_AUTHOR || '';
     
     if (!prNumber) {
@@ -18,13 +18,15 @@ async function main() {
     let prType = 'unknown';
     const markers = parseMarkers(prBody);
     
+    const markerType = markers.taskId || markers.phase;
+
     if (headRef.startsWith('agent/plan-status/')) {
       prType = 'status';
-    } else if (markers.taskId === 'requirement') {
+    } else if (markerType === 'requirement') {
       prType = 'requirement';
-    } else if (markers.taskId === 'spec') {
+    } else if (markerType === 'spec') {
       prType = 'spec';
-    } else if (markers.taskId === 'plan') {
+    } else if (markerType === 'plan') {
       prType = 'plan';
     } else if (headRef.startsWith('copilot/')) {
       const { loadConfig } = require('./lib/config-loader');
@@ -38,9 +40,10 @@ async function main() {
     core.setOutput('pr_type', prType);
     core.setOutput('parent_issue', markers.parentIssue || '');
     core.setOutput('task_id', markers.taskId || '');
-    core.info(`PR Type: ${prType}, Parent: ${markers.parentIssue}, Task: ${markers.taskId}`);
+    core.setOutput('phase', markers.phase || '');
+    core.info(`PR Type: ${prType}, Parent: ${markers.parentIssue}, Task: ${markers.taskId}, Phase: ${markers.phase}, HeadRef: ${headRef}`);
     
-    console.log(JSON.stringify({ prType, parentIssue: markers.parentIssue, taskId: markers.taskId }));
+    console.log(JSON.stringify({ prType, parentIssue: markers.parentIssue, taskId: markers.taskId, phase: markers.phase, headRef }));
   } catch (error) {
     core.setFailed(error.message);
     process.exit(1);

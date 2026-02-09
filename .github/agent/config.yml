@@ -87,8 +87,8 @@ ci:
 
 timeouts:
   requirement_pr_minutes: 10
-  spec_pr_minutes: 20
-  plan_pr_minutes: 20
+  spec_pr_minutes: 10
+  plan_pr_minutes: 10
   task_pr_minutes: 45
   ci_minutes: 30
 

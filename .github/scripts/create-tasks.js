@@ -29,10 +29,12 @@ async function main() {
 
     const plan = yaml.load(fs.readFileSync(planPath, 'utf8'));
 
-    if (!plan.tasks || plan.tasks.length === 0) {
+    if (!plan || !Array.isArray(plan.tasks) || plan.tasks.length === 0) {
       core.setFailed('No tasks found in plan');
       return;
     }
+
+    plan.tasks = plan.tasks.map((task, index) => normalizeTask(task, index));
 
     const existingIssues = await github.listIssues({
       labels: config.labels.task.task,
@@ -90,7 +92,7 @@ async function main() {
           [
             config.labels.task.task,
             config.labels.task.pending,
-            config.labels.level[task.level]
+            config.labels.level[task.level] || config.labels.level.l1
           ]
         );
 
@@ -120,7 +122,7 @@ async function main() {
       '',
       '| ID | Level | Status | Issue | PR | Acceptance |',
       '|----|-------|--------|-------|----|-----------| ',
-      ...plan.tasks.map(t => `| ${t.id} | ${t.level} | ${t.status} | ${t.issue ? `#${t.issue}` : '-'} | ${t.pr ? `#${t.pr}` : '-'} | ${t.acceptance} |`),
+      ...plan.tasks.map(t => `| ${t.id} | ${t.level} | ${t.status} | ${t.issue ? `#${t.issue}` : '-'} | ${t.pr ? `#${t.pr}` : '-'} | ${t.acceptance || 'See plan file for details'} |`),
       '',
       '## 任务详情',
       '',
@@ -134,22 +136,72 @@ async function main() {
         `- Dependencies: ${t.deps && t.deps.length > 0 ? t.deps.join(', ') : 'None'}`,
         '',
         'Acceptance Criteria:',
-        t.acceptance,
+        t.acceptance || 'See plan file for details',
         '',
-        t.notes ? `Notes:\n${t.notes}` : '',
+        t.notes ? `Notes:\n${t.notes}` : 'Notes:\nNone',
         ''
       ].join('\n')).join('\n---\n\n')
     ].join('\n');
 
     fs.writeFileSync(planMdPath, planMd);
 
-    core.info('Creating status update PR...');
+    core.info('Task issues created and plan file updated.');
     core.setOutput('plan_updated', 'true');
     core.setOutput('tasks_created', createdIssues.length.toString());
   } catch (error) {
     core.setFailed(error.message);
     process.exit(1);
   }
+}
+
+function normalizeTask(task, index) {
+  const normalized = task && typeof task === 'object' ? { ...task } : {};
+  const id = normalizeTaskId(normalized.id, index);
+
+  normalized.id = id;
+  normalized.title = normalized.title ? String(normalized.title) : `Task ${index + 1}`;
+  normalized.level = normalizeLevel(normalized.level);
+  normalized.status = normalizeStatus(normalized.status);
+  normalized.deps = Array.isArray(normalized.deps) ? normalized.deps.map(d => String(d)) : [];
+  normalized.acceptance = normalized.acceptance
+    ? String(normalized.acceptance)
+    : '完成该任务并通过基础验证';
+  normalized.notes = normalized.notes ? String(normalized.notes) : 'None';
+
+  return normalized;
+}
+
+function normalizeTaskId(taskId, index) {
+  if (!taskId) {
+    return `task-${index + 1}`;
+  }
+
+  return String(taskId).trim();
+}
+
+function normalizeLevel(level) {
+  const normalized = String(level || '').trim().toLowerCase();
+
+  if (['l1', '1', 'low', 'level1', 'level-1'].includes(normalized)) {
+    return 'l1';
+  }
+
+  if (['l2', '2', 'medium', 'med', 'level2', 'level-2'].includes(normalized)) {
+    return 'l2';
+  }
+
+  if (['l3', '3', 'high', 'level3', 'level-3'].includes(normalized)) {
+    return 'l3';
+  }
+
+  return 'l1';
+}
+
+function normalizeStatus(status) {
+  const normalized = String(status || '').trim().toLowerCase();
+  const allowed = new Set(['pending', 'in-progress', 'in-review', 'done', 'blocked', 'cancelled']);
+
+  return allowed.has(normalized) ? normalized : 'pending';
 }
 
 main();

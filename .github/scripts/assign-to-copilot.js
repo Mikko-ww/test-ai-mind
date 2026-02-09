@@ -75,14 +75,17 @@ Please create a comprehensive requirement document based on the user's simple re
       customInstructions = `
 # Task: Generate Chinese Specification Document
 
-Please create a detailed Chinese specification document based on this requirement issue.
+Please create a concise Chinese specification document for workflow testing.
 
 ## Requirements:
 1. Create a new file at: \`${specDir}/issue-${issueNumber}.md\`
-2. Follow the template structure from \`auto-agent/docs/SPEC_TEMPLATE.md\`
-3. Include all sections: 背景与目标, 范围, 用户故事, 验收标准, 风险与回滚, 非目标
-4. Write in Chinese (中文)
-5. Be specific and detailed based on the issue description
+2. Write in Chinese (中文)
+3. Keep it short (about 200-500 words)
+4. Include only these sections:
+   - 背景与目标
+   - 范围（包含/不包含）
+   - 验收标准（3-5 条，可测试）
+   - 非目标
 
 ## PR Requirements:
 1. Create a PR with the spec document
@@ -91,13 +94,12 @@ Please create a detailed Chinese specification document based on this requiremen
    \`\`\`
    Agent-Parent-Issue: ${issueNumber}
    Agent-Task-Id: spec
+   Agent-Phase: spec
    \`\`\`
 4. Target branch: ${baseBranch}
 
 ## Notes:
-- Focus on clarity and completeness
-- Ensure all acceptance criteria are measurable
-- Identify risks and mitigation strategies
+- Focus on clear and testable acceptance criteria
 `.trim();
     } else if (taskType === 'plan') {
       const planYamlDir = config.paths.plan_yaml_dir;
@@ -107,17 +109,21 @@ Please create a detailed Chinese specification document based on this requiremen
       customInstructions = `
 # Task: Generate Execution Plan
 
-Please create a detailed execution plan based on the approved specification.
+Please create a minimal execution plan for workflow testing.
 
 ## Requirements:
 1. Create TWO files:
    - \`${planYamlDir}/issue-${issueNumber}.yaml\` (machine-readable)
    - \`${planMdDir}/issue-${issueNumber}.md\` (human-readable, Chinese)
-2. Follow the template structure from \`auto-agent/docs/PLAN_TEMPLATE.md\`
-3. Follow the schema from \`auto-agent/docs/plan.schema.json\`
-4. Break down into 3-8 tasks
-5. Assign risk levels (l1/l2/l3) to each task
-6. Define dependencies between tasks
+2. Write in Chinese (中文)
+3. Keep it small: only 1-3 tasks
+4. In YAML, each task must include:
+   - id (task-1/task-2...)
+   - title
+   - level (l1/l2/l3, default l1)
+   - status (pending)
+   - deps (array, can be empty)
+   - acceptance (short testable sentence)
 
 ## PR Requirements:
 1. Create a PR with both plan files
@@ -126,13 +132,13 @@ Please create a detailed execution plan based on the approved specification.
    \`\`\`
    Agent-Parent-Issue: ${issueNumber}
    Agent-Task-Id: plan
+   Agent-Phase: plan
    \`\`\`
 4. Target branch: ${baseBranch}
 
 ## Notes:
-- Each task should be independently testable
-- Use l1 for docs/tests, l2 for code changes, l3 for sensitive files
-- Ensure dependencies are correctly specified
+- Keep tasks independent and testable
+- Use l1 by default unless there is clear code risk
 `.trim();
     } else {
       core.setFailed(`Unknown task type: ${taskType}`);
