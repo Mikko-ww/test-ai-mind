@@ -1,0 +1,105 @@
+# ============================================================================
+# Agent Task Dispatcher Workflow - 代理任务分发工作流
+# ============================================================================
+#
+# 【工作流用途】
+# 这个工作流负责从待处理任务队列中选择下一个任务并分配给 GitHub Copilot 执行。
+# 它是任务执行的调度器，确保任务按正确的顺序和依赖关系被处理。
+#
+# 【触发方式】
+# - 手动触发（workflow_dispatch）：由其他工作流或用户手动调用
+# - 需要提供参数：父 Issue 编号（parent_issue）
+# - 可选参数：触发原因（trigger）
+#
+# 【主要功能】
+# 1. 查找待处理任务：扫描所有标记为 pending 的任务 Issues
+# 2. 检查依赖关系：确保任务的所有依赖项都已完成
+# 3. 选择下一个任务：根据优先级和依赖关系选择可执行的任务
+# 4. 分配给 Copilot：将选中的任务分配给 GitHub Copilot 实现
+# 5. 更新任务状态：将任务状态从 pending 更新为 in-progress
+#
+# 【任务选择逻辑】
+# 1. 过滤条件：
+#    - 状态为 pending（agent:pending 标签）
+#    - 属于指定的父 Issue
+#    - 所有依赖任务已完成
+#
+# 2. 优先级排序：
+#    - L1 任务优先（低风险，可自动合并）
+#    - 无依赖的任务优先
+#    - 创建时间早的任务优先
+#
+# 3. 并发控制：
+#    - 同时只处理一个任务（避免冲突）
+#    - 如果有任务正在进行中，跳过分发
+#
+# 【工作流程】
+# 1. 触发工作流（Plan PR 合并后或任务完成后）
+# 2. 查询所有 pending 状态的任务
+# 3. 检查每个任务的依赖关系
+# 4. 选择第一个满足条件的任务
+# 5. 将任务分配给 Copilot
+# 6. 更新任务标签：pending → in-progress
+# 7. Copilot 创建 Task PR
+#
+# 【依赖关系处理】
+# - 任务可以声明依赖其他任务
+# - 只有当所有依赖任务完成后，任务才能被分发
+# - 依赖关系在 Plan YAML 文件中定义
+#
+# 【触发时机】
+# 1. Plan PR 合并后：开始分发第一个任务
+# 2. Task PR 合并后：分发下一个任务
+# 3. 用户手动触发：强制重新分发
+# 4. /resume 命令：恢复暂停的分发
+#
+# 【使用场景】
+# - 自动化任务执行流程
+# - 按依赖顺序执行任务
+# - 控制任务并发数量
+# - 实现任务队列管理
+#
+# ============================================================================
+
+name: Agent Task Dispatcher
+run-name: "Agent Task Dispatcher • Parent Issue #${{ inputs.parent_issue }} • ${{ inputs.trigger }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      parent_issue:
+        description: 'Parent issue number'
+        required: true
+        type: number
+      trigger:
+        description: 'Trigger reason'
+        required: false
+        type: string
+        default: 'manual'
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          npm install js-yaml @octokit/rest
+
+      - name: Dispatch next task
+        run: node .github/scripts/dispatch-task.js
+        env:
+          AGENT_GH_TOKEN: ${{ secrets.AGENT_GH_TOKEN }}
+          PARENT_ISSUE: ${{ inputs.parent_issue }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
