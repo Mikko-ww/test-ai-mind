@@ -21,7 +21,7 @@ async function main() {
       state_id: `agent-state:${owner}/${repo}:${issueNumber}`,
       version: 16,
       parent_issue: issueNumber,
-      current_phase: null,
+      current_phase: 'requirement',
       phases: {
         requirement: {
           status: 'pending',
@@ -60,7 +60,7 @@ async function main() {
       cursor_task_id: null,
       tasks: {},
       paused: false,
-      phase: 'spec-in-progress',
+      phase: 'requirement-in-progress',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };

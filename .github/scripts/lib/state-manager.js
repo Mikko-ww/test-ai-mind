@@ -5,20 +5,14 @@ const { initializePhases } = require('./phase-manager');
 
 const STATE_VERSION = 16;
 const STATE_MARKER_CANONICAL = '<!-- agent-state:json -->';
-const STATE_MARKER_LEGACY = '<!-- AGENT-STATE -->';
-const STATE_MARKERS = [STATE_MARKER_CANONICAL, STATE_MARKER_LEGACY];
 
-async function getLatestState(github, issueNumber, stateMarkers = STATE_MARKERS) {
+async function getLatestState(github, issueNumber, stateMarker = STATE_MARKER_CANONICAL) {
   try {
     const comments = await github.listComments(issueNumber);
-    const markers = Array.isArray(stateMarkers) ? stateMarkers : [stateMarkers];
     
     const stateComments = comments
-      .filter(c => c.body && markers.some(marker => c.body.includes(marker)))
-      .map(c => {
-        const marker = markers.find(m => c.body.includes(m));
-        return parseStateFromComment(c.body, marker || STATE_MARKER_CANONICAL);
-      })
+      .filter(c => c.body && c.body.includes(stateMarker))
+      .map(c => parseStateFromComment(c.body, stateMarker))
       .filter(s => s !== null);
     
     if (stateComments.length === 0) {
@@ -148,11 +142,10 @@ class StateManager {
     this.issueNumber = issueNumber;
     this.state = null;
     this.stateMarker = STATE_MARKER_CANONICAL;
-    this.stateMarkers = STATE_MARKERS;
   }
 
   async load() {
-    this.state = await getLatestState(this.github, this.issueNumber, this.stateMarkers);
+    this.state = await getLatestState(this.github, this.issueNumber, this.stateMarker);
     if (!this.state) {
       throw new Error(`No state found for issue #${this.issueNumber}`);
     }
