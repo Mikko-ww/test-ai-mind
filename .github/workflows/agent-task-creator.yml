@@ -95,7 +95,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm install js-yaml @octokit/rest
+          npm install js-yaml @octokit/rest @actions/core
 
       - name: Create task issues
         run: node .github/scripts/create-tasks.js
