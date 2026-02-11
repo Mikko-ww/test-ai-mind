@@ -176,7 +176,7 @@ async function main() {
           [
             config.labels.task.task,
             config.labels.task.pending,
-            config.labels.level[task.level]
+            config.labels.level[task.level.toLowerCase()]
           ]
         );
 
