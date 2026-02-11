@@ -6,7 +6,7 @@ Create a detailed execution plan with task breakdown.
 1. Create YAML: `{{planYamlDir}}/issue-{{epicNumber}}.yaml`
 2. Create Markdown: `{{planMdDir}}/issue-{{epicNumber}}.md`
 3. Follow template: `auto-agent/docs/PLAN_TEMPLATE.md`
-4. Include task breakdown with risk levels (l1/l2/l3)
+4. Include task breakdown with risk levels (L1/L2/L3)
 5. Write in Chinese (中文)
 
 ## PR Requirements:
