@@ -73,7 +73,7 @@ on:
       parent_issue:
         description: 'Parent issue number'
         required: true
-        type: number
+        type: string
 
 permissions:
   actions: write
