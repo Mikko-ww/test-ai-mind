@@ -25,7 +25,7 @@ tasks:
       - pyproject.toml配置完成，包含pygame依赖
       - README.md包含项目说明和安装步骤
       - 使用uv init初始化项目
-    dependencies:[]
+    deps: null
     prerequisites:
       - uv工具已在系统中可用
     implementation_notes:
@@ -52,7 +52,7 @@ tasks:
       - 蛇身体跟随蛇头移动
       - 防止蛇反向移动的逻辑实现
       - 蛇的增长逻辑实现
-    dependencies:
+    deps:
       - task-1
     prerequisites:
       - game目录和项目环境已配置
@@ -82,7 +82,7 @@ tasks:
       - 食物不会生成在蛇身上
       - 碰撞检测逻辑实现（吃食物、撞墙、撞自己）
       - 碰撞检测准确无误
-    dependencies:
+    deps:
       - task-2
     prerequisites:
       - Snake类已实现
@@ -113,7 +113,7 @@ tasks:
       - 键盘输入正常响应
       - 分数实时显示
       - 游戏结束时显示提示信息
-    dependencies:
+    deps:
       - task-3
     prerequisites:
       - Snake类和Food类已实现
@@ -147,7 +147,7 @@ tasks:
       - 包含游戏操作说明
       - 游戏在主流操作系统上测试通过
       - 代码添加必要注释
-    dependencies:
+    deps:
       - task-4
     prerequisites:
       - 游戏核心功能已实现
