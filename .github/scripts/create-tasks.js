@@ -63,6 +63,11 @@ async function main() {
     const issueNumber = parseInt(process.env.PARENT_ISSUE);
     const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
 
+    core.info(`[DEBUG] GITHUB_REPOSITORY: ${process.env.GITHUB_REPOSITORY}`);
+    core.info(`[DEBUG] AGENT_GH_TOKEN set: ${!!process.env.AGENT_GH_TOKEN}`);
+    core.info(`[DEBUG] PARENT_ISSUE: ${process.env.PARENT_ISSUE}`);
+    core.info(`[DEBUG] owner: ${owner}, repo: ${repo}`);
+
     if (!token || !issueNumber || !owner || !repo) {
       core.setFailed('Missing required environment variables');
       return;
@@ -70,19 +75,29 @@ async function main() {
 
     const github = new GitHubClient(token, owner, repo);
     const config = loadConfig();
+    core.info(`[DEBUG] config.paths.plan_yaml_dir: ${config.paths.plan_yaml_dir}`);
     const planPath = `${config.paths.plan_yaml_dir}/issue-${issueNumber}.yaml`;
 
+    core.info(`[DEBUG] planPath: ${planPath}`);
     if (!fs.existsSync(planPath)) {
       core.setFailed(`Plan file not found: ${planPath}`);
       return;
     }
 
-    const plan = yaml.load(fs.readFileSync(planPath, 'utf8'));
+    const fileContent = fs.readFileSync(planPath, 'utf8');
+    core.info(`[DEBUG] Loaded plan file content:\n${fileContent}`);
+
+    const plan = yaml.load(fileContent);
+
+    core.info(`[DEBUG] plan YAML loaded: ${JSON.stringify(plan, null, 2)}`);
 
     if (!plan.tasks || plan.tasks.length === 0) {
       core.setFailed('No tasks found in plan');
       return;
     }
+
+    core.info(`[DEBUG] plan.tasks count: ${plan.tasks.length}`);
+    core.info(`[DEBUG] plan.tasks: ${JSON.stringify(plan.tasks, null, 2)}`);
 
     const existingIssues = await github.listIssues({
       labels: config.labels.task.task,
@@ -107,6 +122,7 @@ async function main() {
     const usedTaskKeys = new Set(taskIssueMap.keys());
 
     for (const task of plan.tasks) {
+      core.info(`[DEBUG] Processing task: ${JSON.stringify(task, null, 2)}`);
       const baseTaskKey = buildBaseTaskKey(task.id, task.title);
       const taskKey = taskIssueMap.has(baseTaskKey)
         ? baseTaskKey
@@ -150,6 +166,9 @@ async function main() {
           '',
           markerBlock
         ].join('\n');
+
+        core.info(`[DEBUG] Creating issue with title: [Task ${taskKey}] ${task.title}`);
+        core.info(`[DEBUG] Issue body:\n${issueBody}`);
 
         const newIssue = await github.createIssue(
           `[Task ${taskKey}] ${task.title}`,
@@ -208,10 +227,13 @@ async function main() {
       ].join('\n')).join('\n---\n\n')
     ].join('\n');
 
+    core.info(`[DEBUG] Saving plan markdown to: ${planMdPath}`);
     fs.writeFileSync(planMdPath, planMd);
 
+    core.info(`[DEBUG] Created issues summary: ${JSON.stringify(createdIssues, null, 2)}`);
     core.setOutput('tasks_created', createdIssues.length.toString());
   } catch (error) {
+    core.error(`[ERROR] ${error.stack || error}`);
     core.setFailed(error.message);
     process.exit(1);
   }
