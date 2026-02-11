@@ -25,8 +25,7 @@ tasks:
       - pyproject.toml配置完成，包含pygame依赖
       - README.md包含项目说明和安装步骤
       - 使用uv init初始化项目
-    dependencies:
-      - 无
+    dependencies:[]
     prerequisites:
       - uv工具已在系统中可用
     implementation_notes:
