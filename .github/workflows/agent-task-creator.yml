@@ -1,0 +1,121 @@
+# ============================================================================
+# Agent Task Creator Workflow - 代理任务创建工作流
+# ============================================================================
+#
+# 【工作流用途】
+# 这个工作流负责根据实施计划（Plan）创建子任务 Issues。
+# 它将大型开发任务分解为多个可管理的小任务，并为每个任务创建独立的 Issue。
+#
+# 【触发方式】
+# - 手动触发（workflow_dispatch）：由 agent-pr-router 在 Plan PR 合并后调用
+# - 需要提供参数：父 Issue 编号（parent_issue）
+#
+# 【主要功能】
+# 1. 读取计划文件：从 plans/ 目录读取 YAML 格式的实施计划
+# 2. 解析任务列表：提取所有子任务的详细信息
+# 3. 创建任务 Issues：为每个子任务创建独立的 GitHub Issue
+# 4. 设置任务属性：
+#    - 标题：任务描述
+#    - 标签：agent:task, agent:pending, 风险级别（L1/L2/L3）
+#    - 关联：链接到父 Issue
+#    - 元数据：任务 ID、依赖关系、文件路径等
+# 5. 触发任务分发：自动触发 task-dispatcher 派发首个可执行任务
+#
+# 【任务分级】
+# - L1（低风险）：文档、测试、配置文件 → 自动合并
+# - L2（中等风险）：应用代码、业务逻辑 → 需要 /approve-task
+# - L3（高风险）：核心功能、安全相关 → 需要完整审查
+#
+# 【工作流程】
+# 1. Plan PR 被合并
+# 2. agent-pr-router 触发此工作流
+# 3. 读取 plans/{issue-number}.yml 文件
+# 4. 解析计划中的所有任务
+# 5. 为每个任务创建 Issue：
+#    - 设置标题和描述
+#    - 添加标签（task, pending, L1/L2/L3）
+#    - 关联到父 Issue
+#    - 添加任务元数据
+# 6. 触发 task-dispatcher 派发首任务
+# 7. 父 Issue 进入执行态（由后续流程维护）
+#
+# 【计划文件格式】
+# ```yaml
+# tasks:
+#   - id: task-1
+#     title: "实现用户登录功能"
+#     description: "..."
+#     risk_level: L2
+#     files:
+#       - src/auth/login.js
+#     dependencies: []
+# ```
+#
+# 【创建的 Issue 格式】
+# - 标题：[Task] 实现用户登录功能
+# - 标签：agent:task, agent:pending, agent:l2
+# - Body：包含任务描述、文件列表、依赖关系、父 Issue 链接
+#
+# 【使用场景】
+# - Plan PR 合并后自动创建所有子任务
+# - 将大型功能分解为可管理的小任务
+# - 为每个任务分配独立的跟踪 Issue
+# - 支持并行开发多个任务
+#
+# ============================================================================
+
+name: Agent Task Creator
+run-name: "Agent Task Creator • Parent Issue #${{ inputs.parent_issue }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      parent_issue:
+        description: 'Parent issue number'
+        required: true
+        type: number
+
+permissions:
+  actions: write
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  create-tasks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          npm install js-yaml @octokit/rest
+
+      - name: Create task issues
+        run: node .github/scripts/create-tasks.js
+        env:
+          AGENT_GH_TOKEN: ${{ secrets.AGENT_GH_TOKEN }}
+          PARENT_ISSUE: ${{ inputs.parent_issue }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+
+      - name: Trigger first task dispatch
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.AGENT_GH_TOKEN }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'agent-task-dispatcher.yml',
+              ref: context.ref.replace('refs/heads/', ''),
+              inputs: {
+                parent_issue: '${{ inputs.parent_issue }}',
+                trigger: 'task-creator'
+              }
+            });

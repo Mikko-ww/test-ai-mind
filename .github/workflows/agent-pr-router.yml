@@ -1,0 +1,127 @@
+# ============================================================================
+# Agent PR Router Workflow - 代理 PR 路由工作流
+# ============================================================================
+#
+# 【工作流用途】
+# 这个工作流是 PR 事件的中央路由器，负责识别 PR 类型并将其路由到相应的处理流程。
+# 它确保不同类型的 PR（Spec、Plan、Task）得到正确的处理。
+#
+# 【触发方式】
+# - PR 打开时（pull_request.opened）
+# - PR 同步时（pull_request.synchronize）：新提交推送到 PR
+# - PR 关闭时（pull_request.closed）：PR 被合并或关闭
+#
+# 【PR 类型】
+# 1. Spec PR：规格说明书 PR
+#    - 包含详细的功能规格文档
+#    - 合并后触发 Plan 生成
+#
+# 2. Plan PR：实施计划 PR
+#    - 包含任务分解和实施计划
+#    - 合并后创建子任务 Issues
+#
+# 3. Task PR：任务实现 PR
+#    - 包含具体的代码实现
+#    - 需要 CI 验证和合并策略评估
+#
+# 【主要功能】
+# 1. 识别 PR 类型：通过 PR body 中的标记识别类型
+# 2. 路由到处理器：
+#    - Spec PR 合并 → 触发 Plan 生成
+#    - Plan PR 合并 → 创建任务 Issues
+#    - Task PR 打开/更新 → 触发 CI 验证
+# 3. 提取元数据：从 PR body 提取父 Issue、任务 ID 等信息
+#
+# 【工作流程】
+# 1. PR 事件触发工作流
+# 2. 识别 PR 类型（通过 PR body 标记）
+# 3. 提取相关元数据（父 Issue、任务 ID）
+# 4. 根据 PR 类型和事件类型路由：
+#    - Spec PR 合并 → handle-spec-merge.js
+#    - Plan PR 合并 → handle-plan-merge.js
+#    - Task PR 打开/更新 → trigger-ci.js
+# 5. 更新父 Issue 状态
+#
+# 【识别标记】
+# PR body 中包含的特殊标记：
+# - Agent-PR-Type: spec|plan|task → PR 路由类型
+# - Agent-Phase-Name: spec|plan → 阶段语义
+# - Agent-Task-Key: task-xxx → 任务唯一键
+# - Agent-Parent-Issue: 123 → 父 Issue 编号
+#
+# 【使用场景】
+# - 自动处理 Copilot 创建的各类 PR
+# - 确保 PR 按正确的流程处理
+# - 维护 Issue 和 PR 之间的关联
+# - 触发后续的自动化步骤
+#
+# ============================================================================
+
+name: Agent PR Router
+run-name: "Agent PR Router • PR #${{ github.event.pull_request.number }} • ${{ github.event.pull_request.title }}"
+
+on:
+  pull_request:
+    types: [opened, synchronize, closed]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  checks: write
+
+jobs:
+  route:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: cd .github/scripts && npm install
+
+      - name: Identify PR type
+        id: identify
+        run: node .github/scripts/identify-pr-type.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+
+      - name: Handle Spec PR merge
+        if: steps.identify.outputs.pr_type == 'spec' && github.event.action == 'closed' && github.event.pull_request.merged == true
+        run: node .github/scripts/handle-spec-merge.js
+        env:
+          AGENT_GH_TOKEN: ${{ secrets.AGENT_GH_TOKEN }}
+          PARENT_ISSUE: ${{ steps.identify.outputs.parent_issue }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+
+      - name: Handle Plan PR merge
+        if: steps.identify.outputs.pr_type == 'plan' && github.event.action == 'closed' && github.event.pull_request.merged == true
+        run: node .github/scripts/handle-plan-merge.js
+        env:
+          AGENT_GH_TOKEN: ${{ secrets.AGENT_GH_TOKEN }}
+          PARENT_ISSUE: ${{ steps.identify.outputs.parent_issue }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REF: ${{ github.ref }}
+
+      - name: Trigger CI for task PRs
+        if: steps.identify.outputs.pr_type == 'task' && (github.event.action == 'opened' || github.event.action == 'synchronize')
+        run: node .github/scripts/trigger-ci.js
+        env:
+          AGENT_GH_TOKEN: ${{ secrets.AGENT_GH_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PARENT_ISSUE: ${{ steps.identify.outputs.parent_issue }}
+          TASK_KEY: ${{ steps.identify.outputs.task_key }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REF: ${{ github.ref }}
