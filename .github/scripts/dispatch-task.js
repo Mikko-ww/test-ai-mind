@@ -112,7 +112,7 @@ async function main() {
       riskNotes = '- This is a high-risk task\n- Requires full review and approval before merge';
     }
 
-    const prompt = loadPrompt('dispatch/task') || '';
+    const prompt = '----ww----';
     const info = [
       `🚦 Task Dispatch: [${nextTask.id}] ${nextTask.title}`,
       riskNotes,
