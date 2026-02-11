@@ -104,15 +104,15 @@ async function main() {
 
     // Build risk notes based on level
     let riskNotes = '';
-    if (nextTask.level === 'l1') {
+    if (nextTask.level.toLowerCase() === 'l1') {
       riskNotes = '- This is a low-risk task (docs/tests only)\n- Will auto-merge after CI passes';
-    } else if (nextTask.level === 'l2') {
+    } else if (nextTask.level.toLowerCase() === 'l2') {
       riskNotes = '- This is a medium-risk task\n- Requires `/approve-task` command after CI passes';
-    } else if (nextTask.level === 'l3') {
+    } else if (nextTask.level.toLowerCase() === 'l3') {
       riskNotes = '- This is a high-risk task\n- Requires full review and approval before merge';
     }
 
-    const prompt = loadPrompt('task_dispatch') || '';
+    const prompt = loadPrompt('dispatch/task') || '';
     const info = [
       `🚦 Task Dispatch: [${nextTask.id}] ${nextTask.title}`,
       riskNotes,
