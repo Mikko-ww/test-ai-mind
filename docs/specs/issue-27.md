@@ -234,14 +234,20 @@
 ```
 game/
 ├── snake_game/
-│   ├── __init__.py
-│   ├── main.py          # 主程序入口
-│   ├── game.py          # 游戏逻辑
-│   └── config.py        # 配置参数
+│   ├── __init__.py      # 包初始化
+│   ├── main.py          # 主程序入口，包含游戏主循环
+│   ├── game.py          # 游戏逻辑，包含Snake和Game类
+│   └── config.py        # 配置参数（窗口大小、颜色、速度等）
 ├── pyproject.toml       # uv项目配置
 ├── uv.lock              # uv锁定文件
 └── README.md            # 说明文档
 ```
+
+**模块职责说明：**
+
+- **main.py**: 程序入口，初始化pygame，创建游戏实例，运行主循环
+- **game.py**: 核心游戏逻辑，包含Snake类（蛇的移动、生长）和Game类（游戏状态管理、碰撞检测、渲染）
+- **config.py**: 游戏配置常量，如窗口尺寸、颜色定义、游戏速度、网格大小等
 
 ### 关键技术选型
 
