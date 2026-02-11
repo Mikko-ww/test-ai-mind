@@ -36,7 +36,7 @@ tasks:
     testing_requirements:
       - 验证uv sync能正常安装依赖
       - 验证项目结构符合uv规范
-    issue: null
+    issue: 71
     pr: null
 
   - id: task-2
@@ -66,7 +66,7 @@ tasks:
       - 单元测试验证移动逻辑
       - 测试方向控制功能
       - 测试蛇身增长逻辑
-    issue: null
+    issue: 72
     pr: null
 
   - id: task-3
@@ -96,7 +96,7 @@ tasks:
       - 测试食物随机生成逻辑
       - 测试各种碰撞检测场景
       - 边界条件测试
-    issue: null
+    issue: 73
     pr: null
 
   - id: task-4
@@ -129,7 +129,7 @@ tasks:
       - 手动测试游戏界面显示
       - 测试键盘控制响应
       - 测试游戏流程完整性
-    issue: null
+    issue: 74
     pr: null
 
   - id: task-5
@@ -161,7 +161,7 @@ tasks:
       - 在Windows/macOS/Linux上测试
       - 验证安装文档的准确性
       - 进行端到端游戏测试
-    issue: null
+    issue: 75
     pr: null
 
 # 风险与注意事项
