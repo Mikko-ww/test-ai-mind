@@ -1,0 +1,130 @@
+# ============================================================================
+# Agent Commands Workflow - 代理命令处理工作流
+# ============================================================================
+#
+# 【工作流用途】
+# 这个工作流负责处理用户在 Issue 或 PR 评论中输入的命令，实现人机交互控制。
+# 它允许用户通过特定命令来控制 Agent 的行为和工作流程。
+#
+# 【触发方式】
+# - Issue 评论创建时（issue_comment.created）
+# - 仅响应有权限用户（OWNER、MEMBER、COLLABORATOR）的命令
+#
+# 【支持的命令】
+# 1. /approve-task：批准 L2 级别的任务 PR，允许其合并
+# 2. /pause：暂停任务分发，停止创建新的任务
+# 3. /resume：恢复任务分发，继续处理待处理的任务
+# 4. /retry：重试失败的任务
+# 5. /abort：中止整个流程，停止所有任务
+#
+# 【主要功能】
+# 1. 权限验证：检查评论者是否有权限执行命令
+# 2. 命令解析：识别评论中的命令类型
+# 3. 命令执行：根据命令类型调用相应的处理脚本
+# 4. 状态更新：更新 Issue/PR 的标签和状态
+#
+# 【工作流程】
+# 1. 用户在 Issue 或 PR 中发表评论（以 / 开头）
+# 2. 工作流检查用户权限
+# 3. 解析命令类型
+# 4. 执行相应的命令处理逻辑
+# 5. 更新 Issue/PR 状态和标签
+# 6. 添加反馈评论
+#
+# 【使用场景】
+# - 批准中等风险的代码更改（L2 任务）
+# - 暂停 Agent 以进行手动干预
+# - 恢复被暂停的 Agent 工作流
+# - 重试失败的任务
+# - 紧急停止整个自动化流程
+#
+# ============================================================================
+
+name: Agent Commands
+run-name: "Agent Commands • #${{ github.event.issue.number }} • ${{ github.event.issue.title }}"
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  handle-command:
+    runs-on: ubuntu-latest
+    if: |
+      contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association) &&
+      (startsWith(github.event.comment.body, '/approve-task') ||
+       startsWith(github.event.comment.body, '/pause') ||
+       startsWith(github.event.comment.body, '/resume') ||
+       startsWith(github.event.comment.body, '/retry') ||
+       startsWith(github.event.comment.body, '/skip-phase') ||
+       startsWith(github.event.comment.body, '/cancel-phase') ||
+       startsWith(github.event.comment.body, '/reopen') ||
+       startsWith(github.event.comment.body, '/abort'))
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: cd .github/scripts && npm install
+
+      - name: Parse command
+        id: parse
+        run: node .github/scripts/parse-command.js
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+
+      - name: Forward command if needed
+        id: forward
+        if: |
+          steps.parse.outputs.command == 'retry' ||
+          steps.parse.outputs.command == 'skip-phase' ||
+          steps.parse.outputs.command == 'cancel-phase' ||
+          steps.parse.outputs.command == 'reopen'
+        run: node .github/scripts/handle-commands.js
+        env:
+          AGENT_GH_TOKEN: ${{ secrets.AGENT_GH_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          COMMAND: ${{ steps.parse.outputs.command }}
+          ACTOR: ${{ github.event.comment.user.login }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+
+      - name: Handle approve-task
+        if: steps.parse.outputs.command == 'approve-task'
+        run: node .github/scripts/handle-approve-task.js
+        env:
+          AGENT_GH_TOKEN: ${{ secrets.AGENT_GH_TOKEN }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          APPROVER: ${{ github.event.comment.user.login }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+
+      - name: Handle pause/resume/abort
+        if: |
+          steps.parse.outputs.command == 'pause' ||
+          steps.parse.outputs.command == 'resume' ||
+          steps.parse.outputs.command == 'abort' ||
+          (steps.forward.outputs.forward_needed != 'true' && (
+            steps.parse.outputs.command == 'retry' ||
+            steps.parse.outputs.command == 'skip-phase' ||
+            steps.parse.outputs.command == 'cancel-phase' ||
+            steps.parse.outputs.command == 'reopen'
+          ))
+        run: node .github/scripts/handle-pause-resume.js
+        env:
+          AGENT_GH_TOKEN: ${{ secrets.AGENT_GH_TOKEN }}
+          ISSUE_NUMBER: ${{ steps.forward.outputs.target_issue || github.event.issue.number }}
+          COMMAND: ${{ steps.parse.outputs.command }}
+          ACTOR: ${{ github.event.comment.user.login }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REF: ${{ github.ref }}
