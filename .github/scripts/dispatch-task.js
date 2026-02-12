@@ -65,7 +65,7 @@ async function main() {
       await github.removeLabel(issueNumber, config.labels.parent.executing);
       await github.addLabels(issueNumber, [config.labels.parent.done]);
       await github.createComment(issueNumber, 
-        '🎉 All Tasks Completed\n\nAll tasen successfully completed and merged.\n\nStatus: `done`'
+        '🎉 All Tasks Completed\n\nAll tasks successfully completed and merged.\n\nStatus: `done`'
       );
       core.info('=== dispatch-task.js completed (all tasks done) ===');
       return;
