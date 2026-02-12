@@ -3,7 +3,7 @@
 const core = require('@actions/core');
 const { PHASES, initializePhases } = require('./phase-manager');
 
-const STATE_VERSION = 18;
+const STATE_VERSION = 19;
 
 async function getLatestState(github, issueNumber, stateMarker) {
   try {
