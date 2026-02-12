@@ -1,8 +1,0 @@
-[project]
-name = "game"
-version = "0.1.0"
-description = "贪吃蛇游戏 - 使用 pygame 开发的经典贪吃蛇游戏"
-requires-python = ">=3.10"
-dependencies = [
-    "pygame>=2.5.0",
-]
