@@ -116,8 +116,7 @@ function updatePhaseStatus(state, phase, status, data = {}) {
     state.current_phase = phase;
   }
   
-  // Update version and timestamp
-  state.version = (state.version || 1) + 1;
+  // Update timestamp (version is controlled by STATE_VERSION constant, not auto-incremented)
   state.updated_at = new Date().toISOString();
   
   return state;

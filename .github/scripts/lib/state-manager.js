@@ -80,6 +80,14 @@ function assertStateVersion(state) {
     return null;
   }
 
+  // Automatic migration from version 18 to 19
+  // Version 19 has no schema changes from 18, just a version bump
+  if (state.version === 18 && STATE_VERSION === 19) {
+    core.warning(`Migrating state from version ${state.version} to ${STATE_VERSION}`);
+    state.version = STATE_VERSION;
+    return state;
+  }
+
   if (state.version !== STATE_VERSION) {
     throw new Error(
       `Unsupported state version: ${state.version}. Expected ${STATE_VERSION}. ` +
