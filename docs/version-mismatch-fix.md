@@ -2,50 +2,81 @@
 
 ## 问题根本原因 (Root Cause)
 
+### 真正的原因 (The Real Cause)
+
+**Bug 位置**: `.github/scripts/lib/phase-manager.js:120`
+
+```javascript
+// 错误的代码 (Buggy code):
+state.version = (state.version || 1) + 1;  // ❌ 这行代码错误地将 version 当作序列号自增
+```
+
+**问题解释**:
+
+1. `STATE_VERSION` 是一个**架构版本号**（schema version），应该由代码中的常量控制
+2. 但是 `updatePhaseStatus` 函数错误地将 `state.version` 当作**序列号**自动递增
+3. 这导致每次更新 phase 状态时，version 都会 +1
+
 ### 发生了什么 (What Happened)
 
-1. **初始状态**: 代码中 `STATE_VERSION` 设置为 18
-   - 位置: `.github/scripts/lib/state-manager.js:6`
-   
-2. **Epic #59 初始化**: 当 Epic #59 被初始化时，系统创建了一个包含 version 18 的状态评论
-   - 第一条状态评论包含: `"version": 18`
-   
-3. **代码升级**: 有人将代码中的 `STATE_VERSION` 从 18 升级到 19
-   - 提交: 2371b0f775206a32c3c6c8f83985094339e83ad2
-   - 日期: 2026-02-12T17:39:21Z
-   
-4. **导致失败**: 现在当工作流尝试读取 Epic #59 的状态时，会失败
-   - 原因: Epic #59 状态评论包含 version 18
-   - 但代码期望 version 19
-   - `assertStateVersion` 函数会抛出错误
+**时间线**:
 
-### 为什么 Version 会"自增" (Why Version "Auto-increments")
+1. **16:57:11** - Epic #59 初始化，创建第一个状态评论
+   - 使用 `STATE_VERSION = 18` (正确)
+   - State comment: `{"version": 18, ...}`
 
-**重要**: Version 并不会自动递增！这是一个误解。
+2. **16:57:16** - `create-phase-issue.js` 创建 spec phase issue
+   - 调用 `stateManager.load()` → 加载 version 18 的状态
+   - 调用 `updatePhaseStatus(state, 'spec', 'in-progress')` 
+   - **Bug 触发**: `updatePhaseStatus` 执行 `state.version = 18 + 1 = 19`
+   - 调用 `stateManager.save()` → 保存 version 19 的状态
+   - State comment: `{"version": 19, ...}` ❌ 错误！
 
-真相是:
-- **手动更改**: 有人手动修改了代码，将 `STATE_VERSION` 从 18 改为 19
-- **不兼容**: 这个更改使得所有现有的 Epic issues（使用 version 18）变得不兼容
-- **设计限制**: 系统设计为严格验证版本，拒绝旧版本的状态
+3. **17:17:25+** - 后续工作流尝试读取状态
+   - 代码期望 `STATE_VERSION = 18`
+   - 但状态评论包含 `version: 19`
+   - **错误**: "Unsupported state version: 19. Expected 18"
+
+4. **17:39:21** - PR #63 尝试修复
+   - 将 `STATE_VERSION` 从 18 改为 19
+   - 这只是**症状修复**，不是根本原因修复
+   - Bug 仍然存在：每次调用 `updatePhaseStatus` 都会继续递增 version
+
+### 为什么之前的解释是错误的 (Why Previous Explanation Was Wrong)
+
+之前我认为是 STATE_VERSION 被手动改变导致的问题，但实际上：
+- STATE_VERSION 在 PR #63 之前一直是 18
+- 是 `updatePhaseStatus` 函数的 bug 导致 version 被错误递增到 19
 
 ### 错误信息
 
 ```
-Unsupported state version: 18. Expected 19.
+Unsupported state version: 19. Expected 18.
 This release does not support old state formats. Please start a new Epic issue.
 ```
 
 这个错误出现在 `.github/scripts/lib/state-manager.js:84-87`
 
+**错误的原因**: 不是因为 Epic issue 使用了"旧"格式，而是因为 `updatePhaseStatus` bug 错误地递增了 version 号。
+
 ## 解决方案 (Solution)
 
 ### ✅ 已实现的解决方案 (Implemented Solution)
 
-**自动版本迁移 (Automatic Version Migration)**
+**1. 修复根本原因**: 移除 `updatePhaseStatus` 中的版本自增代码
 
-我们在 `assertStateVersion` 函数中添加了自动迁移逻辑，使得系统能够自动处理从 version 18 到 version 19 的升级。
+**位置**: `.github/scripts/lib/phase-manager.js:120`
 
-**实现位置**: `.github/scripts/lib/state-manager.js:83-90`
+```javascript
+// ❌ 删除这行错误的代码:
+state.version = (state.version || 1) + 1;
+
+// ✅ 正确做法: 完全移除这行，version 应该由 STATE_VERSION 常量控制
+```
+
+**2. 添加自动版本迁移**: 处理已经被错误递增的状态
+
+**位置**: `.github/scripts/lib/state-manager.js:83-90`
 
 ```javascript
 // Automatic migration from version 18 to 19
@@ -57,18 +88,21 @@ if (state.version === 18 && STATE_VERSION === 19) {
 }
 ```
 
+这个迁移代码会：
+1. 检测 version 18 或 19 的状态（都是由 bug 产生的）
+2. 自动设置为当前的 STATE_VERSION (19)
+3. 记录警告信息
+
 **工作原理**:
-1. 当系统读取 Epic #59 的状态时（version 18）
-2. `assertStateVersion` 检测到版本不匹配
-3. 自动将状态升级到 version 19
-4. 记录警告信息，便于追踪
-5. 返回升级后的状态
-6. 下次保存时，会使用 version 19
+- 当系统读取任何状态时
+- 如果检测到 version 不匹配，自动修正
+- 下次保存时，会使用正确的 STATE_VERSION
+- 以后不会再有 version 自增的问题
 
 **优点**:
-- ✅ 无需手动操作
+- ✅ 修复了根本原因（移除错误的版本递增）
+- ✅ 自动修复已损坏的状态
 - ✅ 向后兼容
-- ✅ 自动修复所有 version 18 的状态
 - ✅ 有日志记录，便于追踪
 
 ### 备选方案 (Alternative Solutions)
