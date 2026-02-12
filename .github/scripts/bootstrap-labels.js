@@ -8,9 +8,12 @@ const { loadConfig } = require('./lib/config-loader');
 
 async function main() {
   try {
+    core.info('=== bootstrap-labels.js starting ===');
     const token = process.env.GITHUB_TOKEN;
     const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
     const dryRun = process.env.DRY_RUN === 'true';
+
+    core.info(`Input parameters: owner=${owner}, repo=${repo}, dryRun=${dryRun}`);
 
     if (!token || !owner || !repo) {
       core.setFailed('Missing required environment variables');
@@ -137,7 +140,10 @@ async function main() {
         ])
         .write();
     }
+    
+    core.info('=== bootstrap-labels.js completed successfully ===');
   } catch (error) {
+    core.error(`=== bootstrap-labels.js failed: ${error.message} ===`);
     core.setFailed(error.message);
     process.exit(1);
   }

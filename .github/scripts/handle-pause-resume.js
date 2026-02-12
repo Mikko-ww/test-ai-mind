@@ -10,6 +10,7 @@ const { execSync } = require('child_process');
 
 async function main() {
   try {
+    core.info('=== handle-pause-resume.js starting ===');
     const token = process.env.AGENT_GH_TOKEN || process.env.GITHUB_TOKEN;
     const issueNumber = parseInt(process.env.ISSUE_NUMBER);
     const command = process.env.COMMAND;
@@ -17,15 +18,19 @@ async function main() {
     const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
     const ref = process.env.GITHUB_REF || 'refs/heads/main';
 
+    core.info(`Input parameters: owner=${owner}, repo=${repo}, issueNumber=${issueNumber}, command=${command}, actor=${actor}`);
+
     if (!token || !issueNumber || !command || !actor || !owner || !repo) {
       core.setFailed('Missing required environment variables');
       return;
     }
 
+    core.info('Creating GitHub client and loading config...');
     const github = new GitHubClient(token, owner, repo);
     const config = loadConfig();
 
     if (command === 'pause') {
+      core.info('Processing pause command...');
       await github.addLabels(issueNumber, [config.labels.parent.paused]);
 
       await github.createComment(
@@ -34,7 +39,9 @@ async function main() {
       );
 
       core.info(`✓ Agent paused for issue #${issueNumber}`);
+      core.info('=== handle-pause-resume.js completed successfully ===');
     } else if (command === 'resume') {
+      core.info('Processing resume command...');
       try {
         await github.removeLabel(issueNumber, config.labels.parent.paused);
       } catch (error) {
@@ -143,10 +150,12 @@ async function main() {
       }
       
     } else if (command === 'cancel-phase') {
+      core.info('Processing cancel-phase command...');
       const stateManager = new StateManager(github, issueNumber);
       await stateManager.load();
       
       const currentPhase = stateManager.state.current_phase;
+      core.info(`Current phase: ${currentPhase}`);
       if (!currentPhase) {
         await github.createComment(issueNumber, '❌ No active phase to cancel.');
         return;
@@ -154,9 +163,11 @@ async function main() {
       
       const phaseIssueNumber = getPhaseIssue(stateManager.state, currentPhase);
       if (phaseIssueNumber) {
+        core.info(`Closing Phase Issue #${phaseIssueNumber}...`);
         await github.updateIssue(phaseIssueNumber, { state: 'closed' });
       }
       
+      core.info('Updating phase status to cancelled...');
       await updatePhaseStatus(stateManager.state, currentPhase, 'cancelled', {
         completed_at: new Date().toISOString()
       });
@@ -165,12 +176,15 @@ async function main() {
       await github.createComment(issueNumber,
         `🛑 **Phase Cancelled**\n\nPhase "${currentPhase}" has been cancelled by @${actor}.\n\n**Options:**\n- Use \`/skip-phase\` to move to the next phase\n- Use \`/abort\` to cancel the entire Epic\n- Use \`/retry\` to retry this phase`
       );
+      core.info('=== handle-pause-resume.js completed successfully ===');
       
     } else if (command === 'reopen') {
+      core.info('Processing reopen command...');
       const stateManager = new StateManager(github, issueNumber);
       await stateManager.load();
       
       const currentPhase = stateManager.state.current_phase;
+      core.info(`Current phase: ${currentPhase}`);
       if (!currentPhase) {
         await github.createComment(issueNumber, '❌ No phase to reopen.');
         return;
@@ -178,18 +192,23 @@ async function main() {
       
       const phaseIssueNumber = getPhaseIssue(stateManager.state, currentPhase);
       if (!phaseIssueNumber) {
+        core.info('No Phase Issue found');
         await github.createComment(issueNumber, `❌ No Phase Issue found for "${currentPhase}".`);
         return;
       }
       
+      core.info(`Checking Phase Issue #${phaseIssueNumber} state...`);
       const phaseIssue = await github.getIssue(phaseIssueNumber);
       if (phaseIssue.state === 'open') {
+        core.info('Phase Issue is already open');
         await github.createComment(issueNumber, `ℹ️ Phase Issue #${phaseIssueNumber} is already open.`);
         return;
       }
       
+      core.info('Reopening Phase Issue...');
       await github.updateIssue(phaseIssueNumber, { state: 'open' });
       
+      core.info('Updating phase status to in-progress...');
       await updatePhaseStatus(stateManager.state, currentPhase, 'in-progress', {
         started_at: stateManager.state.phases[currentPhase].started_at || new Date().toISOString()
       });
@@ -202,11 +221,13 @@ async function main() {
       await github.createComment(phaseIssueNumber,
         `🔓 **Issue Reopened**\n\nThis Phase Issue was reopened by @${actor} via Epic Issue #${issueNumber}.\n\nYou can continue working on this phase.`
       );
+      core.info('=== handle-pause-resume.js completed successfully ===');
       
     } else {
       core.setFailed(`Unknown command: ${command}`);
     }
   } catch (error) {
+    core.error(`=== handle-pause-resume.js failed: ${error.message} ===`);
     core.setFailed(error.message);
     process.exit(1);
   }

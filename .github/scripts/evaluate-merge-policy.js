@@ -9,21 +9,26 @@ const { loadConfig } = require('./lib/config-loader');
 
 async function main() {
   try {
+    core.info('=== evaluate-merge-policy.js starting ===');
     const token = process.env.AGENT_GH_TOKEN || process.env.GITHUB_TOKEN;
     const prNumber = parseInt(process.env.PR_NUMBER);
     const parentIssue = parseInt(process.env.PARENT_ISSUE);
     const taskKey = process.env.TASK_KEY;
     const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
 
+    core.info(`Input parameters: owner=${owner}, repo=${repo}, prNumber=${prNumber}, parentIssue=${parentIssue}, taskKey=${taskKey}`);
+
     if (!token || !prNumber || !parentIssue || !taskKey || !owner || !repo) {
       core.setFailed('Missing required environment variables');
       return;
     }
 
+    core.info('Creating GitHub client and loading config...');
     const github = new GitHubClient(token, owner, repo);
     const config = loadConfig();
 
     const planPath = `${config.paths.plan_yaml_dir}/issue-${parentIssue}.yaml`;
+    core.info(`Loading plan from: ${planPath}`);
     if (!fs.existsSync(planPath)) {
       core.setFailed(`Plan file not found: ${planPath}`);
       return;
@@ -37,19 +42,26 @@ async function main() {
       return;
     }
 
+    core.info(`Task found: ${taskKey}, declared level: ${task.level}`);
     const declaredLevel = task.level;
+    
+    core.info(`Fetching changed files for PR #${prNumber}...`);
     const files = await github.listPRFiles(prNumber);
     const changedFiles = files.map(f => f.filename);
     const maxFiles = config.merge_policy.max_changed_files_l1 || 300;
+
+    core.info(`Changed files count: ${changedFiles.length}, max allowed for L1: ${maxFiles}`);
 
     let computedLevel = 'l1';
     let reason = 'All files in allowlist';
     const matchedRules = [];
 
     if (changedFiles.length > maxFiles) {
+      core.info(`File count exceeds max, setting to L3`);
       computedLevel = 'l3';
       reason = `Too many changed files (${changedFiles.length} > ${maxFiles})`;
     } else {
+      core.info('Evaluating files against merge policy...');
       for (const file of changedFiles) {
         let matchedSensitive = false;
         let matchedAllowlist = false;
@@ -88,10 +100,14 @@ async function main() {
                       computedLevel === 'l2' && declaredLevel === 'l3' ? declaredLevel :
                       computedLevel;
 
+    core.info(`Computed level: ${computedLevel}, Declared level: ${declaredLevel}, Final level: ${finalLevel}`);
+
     const levelLabel = config.labels.level[finalLevel];
 
+    core.info('Adding labels to PR...');
     await github.addLabels(prNumber, [levelLabel, config.labels.pr.task]);
 
+    core.info('Creating policy evaluation comment...');
     const policyComment = [
       '## 🔒 Merge Policy Evaluation',
       '',
@@ -122,7 +138,9 @@ async function main() {
     core.setOutput('can_auto_merge', finalLevel === 'l1' ? 'true' : 'false');
 
     core.info(`✓ Merge policy evaluated: ${finalLevel}`);
+    core.info('=== evaluate-merge-policy.js completed successfully ===');
   } catch (error) {
+    core.error(`=== evaluate-merge-policy.js failed: ${error.message} ===`);
     core.setFailed(error.message);
     process.exit(1);
   }

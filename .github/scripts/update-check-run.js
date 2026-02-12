@@ -5,6 +5,7 @@ const { GitHubClient } = require('./lib/github-client');
 
 async function main() {
   try {
+    core.info('=== update-check-run.js starting ===');
     const token = process.env.GITHUB_TOKEN;
     const checkRunId = parseInt(process.env.CHECK_RUN_ID);
     const validateSuccess = process.env.VALIDATE_SUCCESS === 'true';
@@ -12,17 +13,21 @@ async function main() {
     const testSuccess = process.env.TEST_SUCCESS === 'true';
     const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
 
+    core.info(`Input parameters: owner=${owner}, repo=${repo}, checkRunId=${checkRunId}, validateSuccess=${validateSuccess}, lintSuccess=${lintSuccess}, testSuccess=${testSuccess}`);
+
     if (!token || !checkRunId || !owner || !repo) {
       core.setFailed('Missing required environment variables');
       return;
     }
 
+    core.info('Creating GitHub client...');
     const github = new GitHubClient(token, owner, repo);
 
     let conclusion = 'success';
     let summary = '✓ All checks passed';
     let text = '';
 
+    core.info('Evaluating check results...');
     if (!validateSuccess) {
       conclusion = 'failure';
       summary = '✗ PR parameter validation failed';
@@ -49,6 +54,8 @@ async function main() {
       text = '**Lint:** Passed\n**Tests:** Passed\n\nAll CI checks completed successfully.';
     }
 
+    core.info(`Conclusion: ${conclusion}, Summary: ${summary}`);
+    core.info('Updating check run...');
     await github.updateCheckRun(checkRunId, 'completed', conclusion, {
       title: 'Agent CI Verification',
       summary: summary,
@@ -56,11 +63,13 @@ async function main() {
     });
 
     core.info(`✓ Check run updated: ${conclusion}`);
+    core.info('=== update-check-run.js completed successfully ===');
 
     if (conclusion === 'failure') {
       core.setFailed(summary);
     }
   } catch (error) {
+    core.error(`=== update-check-run.js failed: ${error.message} ===`);
     core.setFailed(error.message);
     process.exit(1);
   }

@@ -59,6 +59,7 @@ function allocateUniqueTaskKey(base, usedKeys) {
 
 async function main() {
   try {
+    core.info('=== create-tasks.js starting ===');
     const token = process.env.AGENT_GH_TOKEN || process.env.GITHUB_TOKEN;
     const issueNumber = parseInt(process.env.PARENT_ISSUE);
     const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
@@ -232,8 +233,10 @@ async function main() {
 
     core.info(`[DEBUG] Created issues summary: ${JSON.stringify(createdIssues, null, 2)}`);
     core.setOutput('tasks_created', createdIssues.length.toString());
+    core.info('=== create-tasks.js completed successfully ===');
   } catch (error) {
     core.error(`[ERROR] ${error.stack || error}`);
+    core.error(`=== create-tasks.js failed: ${error.message} ===`);
     core.setFailed(error.message);
     process.exit(1);
   }
