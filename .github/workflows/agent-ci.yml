@@ -1,0 +1,144 @@
+# ============================================================================
+# Agent CI Verification Workflow - 代理持续集成验证工作流
+# ============================================================================
+#
+# 【工作流用途】
+# 这个工作流负责对 Pull Request 进行持续集成（CI）验证，包括代码检查和测试。
+# 它确保所有提交的代码都符合质量标准，然后才能被合并。
+#
+# 【触发方式】
+# - 手动触发（workflow_dispatch）：由其他工作流调用
+# - 需要提供参数：PR 编号、HEAD SHA、HEAD 引用
+#
+# 【主要功能】
+# 1. 验证 PR 参数：检查 PR 编号、SHA 和引用是否有效
+# 2. 创建检查运行：在 GitHub 上创建一个检查运行状态
+# 3. 检出 PR 代码：切换到 PR 的 HEAD 分支
+# 4. 安装依赖：安装项目所需的 npm 依赖
+# 5. 运行 Lint：执行代码风格和语法检查
+# 6. 运行测试：执行单元测试和集成测试
+# 7. 更新检查状态：将检查结果（成功/失败）报告给 GitHub
+#
+# 【工作流程】
+# 1. 其他工作流（如 agent-pr-router）触发此工作流
+# 2. 验证 PR 的有效性
+# 3. 创建 GitHub 检查运行（状态：进行中）
+# 4. 检出 PR 代码并安装依赖
+# 5. 并行运行 lint 和 test（continue-on-error: true）
+# 6. 更新检查运行状态（成功/失败）
+#
+# 【使用场景】
+# - Task PR 被创建或更新时
+# - 需要验证代码质量时
+# - 自动合并前的必要检查
+#
+# ============================================================================
+
+name: Agent CI Verification
+run-name: "Agent CI • PR #${{ inputs.pr_number }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'Pull request number'
+        required: true
+        type: string
+      head_sha:
+        description: 'PR head SHA to verify'
+        required: true
+        type: string
+      head_ref:
+        description: 'PR head ref to checkout'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: read
+  checks: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install script dependencies
+        run: cd .github/scripts && npm install
+
+      - name: Normalize inputs
+        id: normalize
+        shell: bash
+        run: |
+          pr_number='${{ inputs.pr_number }}'
+          if ! [[ "$pr_number" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::pr_number must be a positive integer, got: $pr_number"
+            exit 1
+          fi
+          echo "pr_number=$pr_number" >> "$GITHUB_OUTPUT"
+
+      - name: Validate PR parameters
+        id: validate
+        run: node .github/scripts/validate-pr.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.normalize.outputs.pr_number }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+          HEAD_REF: ${{ inputs.head_ref }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+
+      - name: Create check run (started)
+        id: check
+        run: node .github/scripts/create-check-run.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+
+      - name: Checkout PR head
+        if: steps.validate.outputs.valid == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.head_ref }}
+          fetch-depth: 1
+
+      - name: Setup Node.js for project
+        if: steps.validate.outputs.valid == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        if: steps.validate.outputs.valid == 'true'
+        run: npm ci
+
+      - name: Run lint
+        id: lint
+        if: steps.validate.outputs.valid == 'true'
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Run tests
+        id: test
+        if: steps.validate.outputs.valid == 'true'
+        run: npm test
+        continue-on-error: true
+
+      - name: Update check run (completed)
+        if: always()
+        run: node .github/scripts/update-check-run.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHECK_RUN_ID: ${{ steps.check.outputs.check_run_id }}
+          VALIDATE_SUCCESS: ${{ steps.validate.outcome == 'success' }}
+          LINT_SUCCESS: ${{ steps.lint.outcome == 'success' }}
+          TEST_SUCCESS: ${{ steps.test.outcome == 'success' }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
