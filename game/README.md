@@ -79,7 +79,7 @@ python main.py
 
 ```
 game/
-├── main.py           # 游戏主程序（待实现）
+├── main.py           # 游戏主程序入口
 ├── pyproject.toml    # 项目配置文件
 ├── README.md         # 项目说明文档
 └── .python-version   # Python 版本配置
