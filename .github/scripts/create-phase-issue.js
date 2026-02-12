@@ -11,10 +11,13 @@ const { loadPrompt } = require('./lib/prompt-loader');
 
 async function main() {
   try {
+    core.info('=== create-phase-issue.js starting ===');
     const token = process.env.AGENT_GH_TOKEN || process.env.GITHUB_TOKEN;
     const phase = process.env.PHASE;
     const epicIssueNumber = parseInt(process.env.EPIC_ISSUE);
     const [owner, repo] = process.env.GITHUB_REPOSITORY.split('/');
+
+    core.info(`Input parameters: owner=${owner}, repo=${repo}, phase=${phase}, epicIssueNumber=${epicIssueNumber}`);
 
     if (!token || !phase || !epicIssueNumber || !owner || !repo) {
       core.setFailed('Missing required environment variables: AGENT_GH_TOKEN, PHASE, EPIC_ISSUE, GITHUB_REPOSITORY');
@@ -26,11 +29,14 @@ async function main() {
       return;
     }
 
+    core.info('Creating GitHub client and loading config...');
     const github = new GitHubClient(token, owner, repo);
     const config = loadConfig();
 
+    core.info(`Fetching Epic Issue #${epicIssueNumber}...`);
     const epicIssue = await github.getIssue(epicIssueNumber);
     
+    core.info('Loading state manager...');
     const stateManager = new StateManager(github, epicIssueNumber);
     await stateManager.load();
     
@@ -43,11 +49,14 @@ async function main() {
       return;
     }
     
+    core.info(`Creating phase issue for ${phase}...`);
     const phaseIssueNumber = await createPhaseIssue(github, config, phase, epicIssue);
     
     core.setOutput('phase_issue_number', phaseIssueNumber);
     core.info(`✓ Created ${phase} issue #${phaseIssueNumber} for Epic #${epicIssueNumber}`);
+    core.info('=== create-phase-issue.js completed successfully ===');
   } catch (error) {
+    core.error(`=== create-phase-issue.js failed: ${error.message} ===`);
     core.setFailed(`Failed to create phase issue: ${error.message}`);
     process.exit(1);
   }
