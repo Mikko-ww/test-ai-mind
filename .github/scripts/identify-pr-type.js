@@ -82,6 +82,7 @@ function validateTaskPRAuthor(prType, headRef, author) {
 
 async function main() {
   try {
+    core.info('=== identify-pr-type.js starting ===');
     const prNumber = parseInt(process.env.PR_NUMBER, 10);
     const prBody = process.env.PR_BODY || '';
     const headRef = process.env.HEAD_REF || '';
@@ -89,12 +90,18 @@ async function main() {
     const token = process.env.GITHUB_TOKEN;
     const repository = process.env.GITHUB_REPOSITORY;
 
+    core.info(`Input parameters: prNumber=${prNumber}, headRef=${headRef}, author=${author}, repository=${repository}`);
+
     if (!prNumber) {
       core.setFailed('Missing PR_NUMBER environment variable');
       return;
     }
 
+    core.info('Parsing agent metadata from PR body...');
     const metadata = parseAgentMetadata(prBody, 'pr');
+    
+    core.info(`Metadata parsed: prType=${metadata.prType}, parentIssue=${metadata.parentIssue}`);
+    core.info('Validating task PR author if applicable...');
     validateTaskPRAuthor(metadata.prType, headRef, author);
 
     core.setOutput('pr_type', metadata.prType);
@@ -114,7 +121,10 @@ async function main() {
       phaseName: metadata.phaseName,
       taskKey: metadata.taskKey
     }));
+    
+    core.info('=== identify-pr-type.js completed successfully ===');
   } catch (error) {
+    core.error(`=== identify-pr-type.js failed: ${error.message} ===`);
     try {
       await postMarkerErrorComment(
         process.env.GITHUB_TOKEN,

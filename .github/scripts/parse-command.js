@@ -4,7 +4,10 @@ const core = require('@actions/core');
 
 async function main() {
   try {
+    core.info('=== parse-command.js starting ===');
     const commentBody = process.env.COMMENT_BODY;
+
+    core.info(`Parsing comment body: ${commentBody ? commentBody.substring(0, 100) : 'empty'}`);
 
     if (!commentBody) {
       core.setFailed('Missing COMMENT_BODY environment variable');
@@ -13,6 +16,8 @@ async function main() {
 
     const comment = commentBody.trim();
     const commandLine = comment.split('\n')[0].trim();
+
+    core.info(`Command line: ${commandLine}`);
 
     let command = null;
     if (commandLine === '/approve-task') command = 'approve-task';
@@ -26,7 +31,9 @@ async function main() {
 
     core.setOutput('command', command || '');
     core.info(`✓ Parsed command: ${command || 'none'}`);
+    core.info('=== parse-command.js completed successfully ===');
   } catch (error) {
+    core.error(`=== parse-command.js failed: ${error.message} ===`);
     core.setFailed(error.message);
     process.exit(1);
   }
