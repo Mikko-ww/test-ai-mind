@@ -39,7 +39,41 @@ This release does not support old state formats. Please start a new Epic issue.
 
 ## 解决方案 (Solution)
 
-### 方案 1: 更新现有状态评论 (Update Existing State Comment) ⭐ 推荐
+### ✅ 已实现的解决方案 (Implemented Solution)
+
+**自动版本迁移 (Automatic Version Migration)**
+
+我们在 `assertStateVersion` 函数中添加了自动迁移逻辑，使得系统能够自动处理从 version 18 到 version 19 的升级。
+
+**实现位置**: `.github/scripts/lib/state-manager.js:83-90`
+
+```javascript
+// Automatic migration from version 18 to 19
+// Version 19 has no schema changes from 18, just a version bump
+if (state.version === 18 && STATE_VERSION === 19) {
+  core.warning(`Migrating state from version ${state.version} to ${STATE_VERSION}`);
+  state.version = STATE_VERSION;
+  return state;
+}
+```
+
+**工作原理**:
+1. 当系统读取 Epic #59 的状态时（version 18）
+2. `assertStateVersion` 检测到版本不匹配
+3. 自动将状态升级到 version 19
+4. 记录警告信息，便于追踪
+5. 返回升级后的状态
+6. 下次保存时，会使用 version 19
+
+**优点**:
+- ✅ 无需手动操作
+- ✅ 向后兼容
+- ✅ 自动修复所有 version 18 的状态
+- ✅ 有日志记录，便于追踪
+
+### 备选方案 (Alternative Solutions)
+
+#### 方案 1: 手动更新状态评论 (Manual Update)
 
 为 Epic #59 发布一个新的状态评论，将 version 从 18 更新到 19。
 
@@ -103,56 +137,61 @@ This release does not support old state formats. Please start a new Epic issue.
    _This comment tracks execution state. Do not edit manually._
    ```
 
-### 方案 2: 回退代码版本 (Revert Code Version)
+**说明**: 由于已实现自动迁移，通常不需要手动操作。
+
+#### 方案 2: 回退代码版本 (Revert Code Version)
 
 将 `STATE_VERSION` 从 19 改回 18，但这会影响所有新创建的 Epic issues。
 
 **不推荐**: 这会导致新的 Epic issues 使用旧版本。
 
-### 方案 3: 实现版本迁移机制 (Implement Version Migration)
+#### 方案 3: 使用迁移脚本 (Use Migration Script)
 
-未来改进: 在 `assertStateVersion` 函数中添加版本迁移逻辑。
+如果需要立即更新所有状态评论（而不是等待自动迁移），可以使用迁移脚本:
 
-```javascript
-function assertStateVersion(state) {
-  if (!state) {
-    return null;
-  }
-
-  // Support migration from version 18 to 19
-  if (state.version === 18 && STATE_VERSION === 19) {
-    core.warning('Migrating state from version 18 to 19');
-    state.version = 19;
-    return state;
-  }
-
-  if (state.version !== STATE_VERSION) {
-    throw new Error(
-      `Unsupported state version: ${state.version}. Expected ${STATE_VERSION}.`
-    );
-  }
-
-  return state;
-}
+```bash
+cd .github/scripts
+GITHUB_TOKEN=<your-token> \
+GITHUB_REPOSITORY=Mikko-ww/test-ai-mind \
+ISSUE_NUMBER=59 \
+node migrate-state-version.js
 ```
+
+**说明**: 自动迁移会在状态被读取时处理，通常不需要手动运行脚本。
+
+## 测试验证 (Testing)
+
+已通过以下测试验证修复:
+
+1. ✅ Version 18 状态自动迁移到 version 19
+2. ✅ Version 19 状态保持不变
+3. ✅ 其他版本（如 17）正确拒绝
 
 ## 预防措施 (Prevention)
 
 1. **版本升级政策**: 制定明确的 STATE_VERSION 升级策略
    - 记录每次版本升级的原因
    - 升级前评估影响范围
+   - **✅ 已实现**: 自动迁移机制，支持向后兼容
    
 2. **迁移机制**: 实现自动版本迁移
-   - 支持向后兼容
-   - 自动升级旧状态
+   - **✅ 已实现**: 支持从 version 18 到 19 的自动迁移
+   - 未来版本升级时，添加相应的迁移逻辑
    
-3. **通知机制**: 版本升级时通知所有活跃的 Epic issues
-   - 自动运行迁移
-   - 或提示用户手动迁移
+3. **通知机制**: 版本升级时的处理策略
+   - **✅ 已实现**: 迁移时记录警告信息
+   - 系统会在日志中显示迁移信息
 
 ## 总结 (Summary)
 
 - ❌ **错误理解**: Version 不会自动递增
 - ✅ **真实原因**: 代码被手动修改，从 version 18 升级到 19
-- ✅ **修复方法**: 为 Epic #59 更新状态评论，使用 version 19
-- ✅ **长期方案**: 实现版本迁移机制，支持向后兼容
+- ✅ **已修复**: 实现了自动版本迁移，无需手动操作
+- ✅ **长期方案**: 已实现版本迁移机制，支持向后兼容
+- ✅ **测试验证**: 所有测试通过，确认修复有效
+
+## 文件变更 (Files Changed)
+
+1. `.github/scripts/lib/state-manager.js`: 添加自动迁移逻辑
+2. `.github/scripts/migrate-state-version.js`: 迁移脚本（备用）
+3. `docs/version-mismatch-fix.md`: 问题分析和解决方案文档
