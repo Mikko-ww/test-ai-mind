@@ -1,0 +1,21 @@
+tasks:
+  - id: task-setup-game-structure
+    title: "创建game目录结构并配置uv项目"
+    level: l1
+    deps: []
+    acceptance: "game目录已创建，pyproject.toml配置完成，uv可正常使用"
+    notes: "创建基础目录结构，初始化uv项目配置，添加pygame依赖"
+  
+  - id: task-implement-snake-game
+    title: "实现贪吃蛇游戏核心逻辑"
+    level: l2
+    deps: ["task-setup-game-structure"]
+    acceptance: "游戏可以运行，包含蛇的移动、食物生成、碰撞检测等基础功能"
+    notes: "实现单文件贪吃蛇游戏，包含游戏主循环、蛇对象、食物对象、输入处理和渲染"
+  
+  - id: task-add-documentation
+    title: "添加游戏说明文档"
+    level: l1
+    deps: ["task-implement-snake-game"]
+    acceptance: "README.md已创建，包含清晰的安装和运行说明"
+    notes: "在game目录下创建README.md，说明如何使用uv运行游戏"
