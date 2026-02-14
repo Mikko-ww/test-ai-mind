@@ -3,6 +3,7 @@ copilot:
   bot_login_allowlist:
     - "copilot-swe-agent"
     - "copilot-swe-agent[bot]"
+    - "Copilot"
   base_branch: "main"
 
 flowmind:
