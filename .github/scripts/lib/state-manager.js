@@ -11,15 +11,27 @@ async function getLatestState(github, issueNumber, stateMarker) {
     
     const stateComments = comments
       .filter(c => c.body && c.body.includes(stateMarker))
-      .map(c => parseStateFromComment(c.body, stateMarker))
-      .filter(s => s !== null);
+      .map(c => {
+        const state = parseStateFromComment(c.body, stateMarker);
+        return state ? { state, commentId: c.id } : null;
+      })
+      .filter(item => item !== null);
     
     if (stateComments.length === 0) {
       return null;
     }
     
-    stateComments.sort((a, b) => b.version - a.version);
-    const latestState = stateComments[0];
+    // Sort by version (descending), then by comment ID (descending) to get the truly latest state
+    // When multiple comments have the same version, the one with the higher comment ID is newer
+    stateComments.sort((a, b) => {
+      const versionDiff = b.state.version - a.state.version;
+      if (versionDiff !== 0) {
+        return versionDiff;
+      }
+      return b.commentId - a.commentId;
+    });
+    
+    const latestState = stateComments[0].state;
 
     return assertStateVersion(latestState);
   } catch (error) {
@@ -80,10 +92,11 @@ function assertStateVersion(state) {
     return null;
   }
 
-  if (state.version !== STATE_VERSION) {
+  // STATE_VERSION is used for initializing new states
+  // Existing states can have any positive version number as it's incremented on updates
+  if (typeof state.version !== 'number' || state.version < 1) {
     throw new Error(
-      `Unsupported state version: ${state.version}. Expected ${STATE_VERSION}. ` +
-      'This release does not support old state formats. Please start a new Epic issue.'
+      `Invalid state version: ${state.version}. State version must be a positive number.`
     );
   }
 
