@@ -80,10 +80,12 @@ function assertStateVersion(state) {
     return null;
   }
 
-  if (state.version !== STATE_VERSION) {
+  // The state.version field is used as a change counter and gets incremented
+  // on every state update. We don't enforce strict equality with STATE_VERSION.
+  // STATE_VERSION is used only for initializing new states.
+  if (typeof state.version !== 'number' || state.version < 1) {
     throw new Error(
-      `Unsupported state version: ${state.version}. Expected ${STATE_VERSION}. ` +
-      'This release does not support old state formats. Please start a new Epic issue.'
+      `Invalid state version: ${state.version}. State version must be a positive number.`
     );
   }
 
