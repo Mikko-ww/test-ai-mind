@@ -13,7 +13,7 @@ async function getLatestState(github, issueNumber, stateMarker) {
       .filter(c => c.body && c.body.includes(stateMarker))
       .map(c => {
         const state = parseStateFromComment(c.body, stateMarker);
-        return state ? { state, commentId: c.id, createdAt: c.created_at } : null;
+        return state ? { state, commentId: c.id } : null;
       })
       .filter(item => item !== null);
     
